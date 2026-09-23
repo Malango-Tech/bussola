@@ -2,6 +2,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { WidgetRenderer } from "@/components/dashboard/widget-renderer";
+import { WidgetFrame } from "@/components/dashboard/widget-frame";
 import { WIDGET_REGISTRY, type WidgetType } from "@/lib/widgets/registry";
 import {
   isReadThroughType,
@@ -189,6 +190,25 @@ describe("the frame", () => {
     render(<WidgetRenderer type="railway-services" config={{ scope: "worker" }} />);
     expect(screen.getByText("worker")).toBeInTheDocument();
     expect(screen.queryByText("api")).toBeNull();
+  });
+
+  it("names the widget and every icon-only control around it", () => {
+    store.served.data = railway();
+    render(
+      <WidgetFrame
+        id="w1"
+        type="railway-fleet"
+        editMode
+        onRemove={() => {}}
+        onConfigure={() => {}}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Fleet Health" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Configure Fleet Health" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove Fleet Health" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Open Fleet Health in Railway" }),
+    ).toBeInTheDocument();
   });
 
   it("tolerates a snapshot missing the fields a widget reads", () => {

@@ -120,8 +120,12 @@ export function AddWidgetSheet({
 
         <div className="space-y-3 px-4">
           <div className="relative">
-            <MagnifyingGlassIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <MagnifyingGlassIcon
+              className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
             <Input
+              aria-label="Search widgets"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search widgets…"
@@ -203,6 +207,8 @@ export function AddWidgetSheet({
                       type="button"
                       size="sm"
                       className="w-full"
+                      // Every card has this button; the name says which one.
+                      aria-label={`Add to dashboard: ${widget.name}`}
                       disabled={pending === widget.type}
                       onClick={async () => {
                         setPending(widget.type);

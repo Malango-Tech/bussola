@@ -64,7 +64,7 @@ export function DemoNotice({ provider }: { provider?: string }) {
   return (
     <div className="mb-2 flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1">
       <Badge variant="secondary" className="gap-1">
-        <SparkleIcon className="size-3" />
+        <SparkleIcon className="size-3" aria-hidden />
         Demo data
       </Badge>
       <Link

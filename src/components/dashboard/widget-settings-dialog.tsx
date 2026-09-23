@@ -197,8 +197,12 @@ export function WidgetSettingsDialog({
           ) : null}
 
           {multiSource ? (
-            <div className="space-y-1.5">
-              <Label>Sources</Label>
+            <div
+              className="space-y-1.5"
+              role="group"
+              aria-labelledby="widget-sources-label"
+            >
+              <Label id="widget-sources-label">Sources</Label>
               {connections.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
                   Nothing connected yet.
