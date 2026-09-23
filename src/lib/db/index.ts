@@ -16,6 +16,14 @@ import * as schema from "./schema";
  */
 export type BussolaDb = PgDatabase<PgQueryResultHKT, typeof schema>;
 
+/**
+ * The handle inside `db.transaction(...)`, for helpers that must run in the
+ * caller's transaction. Reaching for `getDb()` from inside one would open a
+ * second connection on Postgres — and wait forever on PGlite, whose single
+ * connection the transaction is holding.
+ */
+export type BussolaTx = Parameters<Parameters<BussolaDb["transaction"]>[0]>[0];
+
 type Handle = {
   db: BussolaDb;
   migrate: () => Promise<void>;

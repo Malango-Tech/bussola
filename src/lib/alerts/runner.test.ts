@@ -476,3 +476,142 @@ describe("drainDeliveries", () => {
     ]);
   });
 });
+
+describe("batched writes", () => {
+  beforeEach(reset);
+
+  async function addChannel(kind: "slack" | "discord", url: string) {
+    const { encryptSecret } = await import("@/lib/crypto/vault");
+    const id = createId("nch");
+    await handle.insert(schema.notificationChannels).values({
+      id,
+      organizationId,
+      kind,
+      label: kind,
+      targetEncrypted: encryptSecret(url),
+    });
+    return id;
+  }
+
+  async function channelRow(id: string) {
+    const [row] = await handle
+      .select()
+      .from(schema.notificationChannels)
+      .where(eq(schema.notificationChannels.id, id))
+      .limit(1);
+    return row;
+  }
+
+  it("writes a whole evaluation — fired, quiet and skipped rules — together", async () => {
+    const fires = await addRule({ threshold: "0" });
+    const quiet = await addRule({ threshold: "5" });
+    const skipped = await addRule({ metric: "railway.estimatedBill" });
+    await setSnapshot(CRASHED);
+
+    const report = await evaluateAlertsForConnection({ connectionId, organizationId });
+    expect(report).toMatchObject({ evaluated: 2, breached: 1, notified: 1, queued: 1 });
+
+    const fired = await ruleRow(fires);
+    expect(fired.lastState).toBe("breached");
+    expect(fired.lastValue).toBe("1");
+    expect(fired.lastNotifiedAt).not.toBeNull();
+    expect(fired.lastEvaluatedAt).not.toBeNull();
+
+    const calm = await ruleRow(quiet);
+    expect(calm.lastState).toBe("ok");
+    expect(calm.lastValue).toBe("1");
+    // Evaluated but not notified: the cooldown clock must not move.
+    expect(calm.lastNotifiedAt).toBeNull();
+
+    const untouched = await ruleRow(skipped);
+    expect(untouched.lastEvaluatedAt).not.toBeNull();
+    expect(untouched.lastState).toBeNull();
+
+    const [event] = await events();
+    expect(event.ruleId).toBe(fires);
+    expect(await deliveries()).toMatchObject([
+      { eventId: event.id, channelId, status: "pending" },
+    ]);
+  });
+
+  it("keeps a rule's earlier notification time when it evaluates without notifying", async () => {
+    const ruleId = await addRule();
+    await setSnapshot(CRASHED);
+    await evaluateAlertsForConnection({ connectionId, organizationId });
+    const first = (await ruleRow(ruleId)).lastNotifiedAt;
+    expect(first).not.toBeNull();
+
+    // Same breach again: evaluated, not notified.
+    await evaluateAlertsForConnection({ connectionId, organizationId });
+    expect((await ruleRow(ruleId)).lastNotifiedAt).toEqual(first);
+  });
+
+  it("drains a mixed batch in one pass, settling every row it touched", async () => {
+    const failing = await addChannel("discord", "https://discord.com/api/webhooks/1/x");
+    delivery.deliver.mockImplementation(
+      async (channel: { id: string; kind: string }) =>
+        channel.id === channelId
+          ? { channelId: channel.id, kind: channel.kind, ok: true }
+          : {
+              channelId: channel.id,
+              kind: channel.kind,
+              ok: false,
+              error: "Webhook returned 500",
+            },
+    );
+
+    const both = await addRule({ channelIds: [channelId, failing] });
+    const onlyFailing = await addRule({ channelIds: [failing] });
+    await setSnapshot(CRASHED);
+    await evaluateAlertsForConnection({ connectionId, organizationId });
+
+    const report = await drainDeliveries();
+    expect(report).toEqual({ attempted: 3, sent: 1, failed: 2, abandoned: 0 });
+
+    const rows = await deliveries();
+    expect(rows.filter((row) => row.status === "sent")).toMatchObject([
+      { channelId },
+    ]);
+    const retrying = rows.filter((row) => row.status === "pending");
+    expect(retrying).toHaveLength(2);
+    for (const row of retrying) {
+      expect(row.channelId).toBe(failing);
+      expect(row.lastError).toContain("500");
+      expect(row.deliveredAt).toBeNull();
+      expect(row.nextAttemptAt.getTime()).toBeGreaterThan(Date.now() + 20_000);
+    }
+
+    const good = await channelRow(channelId);
+    expect(good.lastDeliveredAt).not.toBeNull();
+    expect(good.lastError).toBeNull();
+    const bad = await channelRow(failing);
+    expect(bad.lastDeliveredAt).toBeNull();
+    expect(bad.lastError).toContain("500");
+
+    // Each event's summary covers exactly its own deliveries.
+    const summaries = Object.fromEntries(
+      (await events()).map((event) => [
+        event.ruleId,
+        JSON.parse(event.deliveriesJson),
+      ]),
+    );
+    expect(summaries[both]).toHaveLength(2);
+    expect(summaries[both]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ channelId, ok: true }),
+        expect.objectContaining({
+          channelId: failing,
+          ok: false,
+          error: "Webhook returned 500",
+        }),
+      ]),
+    );
+    expect(summaries[onlyFailing]).toEqual([
+      expect.objectContaining({ channelId: failing, kind: "discord", ok: false }),
+    ]);
+
+    await handle
+      .delete(schema.notificationChannels)
+      .where(eq(schema.notificationChannels.id, failing));
+  });
+});
