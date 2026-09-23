@@ -8,13 +8,16 @@ import { LineChart } from "./lazy-charts";
  * with its data summary once the Recharts chunk has loaded.
  */
 
-beforeAll(() => {
+beforeAll(async () => {
   class NoopObserver {
     observe() {}
     unobserve() {}
     disconnect() {}
   }
   vi.stubGlobal("ResizeObserver", NoopObserver);
+  // Transforming Recharts on first import can take seconds on a busy test
+  // run; warm it here so the test times the wrapper, not the transform.
+  await import("./line-chart");
 });
 
 describe("lazy charts", () => {
@@ -35,7 +38,7 @@ describe("lazy charts", () => {
     expect(
       await screen.findByRole("img", {
         name: "Balance: 2 points from 1 Sep to 2 Sep. Latest €150; low €100, high €150.",
-      }),
+      }, { timeout: 10_000 }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Loading chart")).toBeNull();
   });
