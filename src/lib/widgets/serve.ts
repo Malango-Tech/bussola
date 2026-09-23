@@ -1,11 +1,7 @@
 import { fetchQontoTransactionsPage, parseCredentials } from "@/lib/connectors";
 import { toUserFacingError } from "@/lib/connectors/errors";
 import type { TenantRepos } from "@/lib/db/tenant";
-import {
-  demoDashboard,
-  demoStatusBoard,
-  demoTransactions,
-} from "@/lib/demo/fixtures";
+import { demoTransactions } from "@/lib/demo/fixtures";
 import type { Provider } from "@/lib/providers";
 import {
   PAYLOAD_VERSION,
@@ -25,6 +21,7 @@ import {
   isVercelWidget,
   type WidgetType,
 } from "@/lib/widgets/registry";
+import { demoPayload } from "@/lib/widgets/demo";
 
 /**
  * Serving widget data, independent of who is asking.
@@ -71,11 +68,10 @@ const RESYNC_BACKOFF_SECONDS = 120;
  * figures. Providers without fixtures fall back to the empty state.
  */
 function notConnected(provider: Provider | "multi") {
-  const demo =
-    provider === "multi" ? demoStatusBoard() : demoDashboard(provider);
+  const demo = demoPayload(provider);
 
   if (demo) {
-    return ok({ ...demo, _demo: true, provider });
+    return ok(demo);
   }
 
   return ok({

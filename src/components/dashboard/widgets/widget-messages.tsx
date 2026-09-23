@@ -16,7 +16,10 @@ export function WidgetMessage({
   action?: { href: string; label: string };
 }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-1.5 px-3 text-center">
+    <div
+      data-slot="widget-message"
+      className="flex h-full flex-col items-center justify-center gap-1.5 px-3 text-center"
+    >
       <p className="text-sm text-muted-foreground text-balance">{title}</p>
       {action ? (
         <Link
