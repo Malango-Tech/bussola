@@ -88,12 +88,16 @@ export function WidgetFrame({
       >
         <div className="flex min-w-0 items-center gap-2">
           {editMode ? (
-            <DotsSixVerticalIcon className="size-4 shrink-0 text-muted-foreground" />
+            <DotsSixVerticalIcon
+              className="size-4 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
           ) : null}
           {def ? (
             <SourceIcon provider={def.provider} className="size-3.5" />
           ) : null}
-          <p className="truncate text-sm font-medium">{heading}</p>
+          {/* A heading, so a screen reader can jump from widget to widget. */}
+          <h2 className="truncate text-sm font-medium">{heading}</h2>
           {/*
             Which account, and what it is narrowed to.
             Only shown when it is not the obvious default: on a canvas with one
@@ -124,7 +128,7 @@ export function WidgetFrame({
                       "text-muted-foreground hover:text-foreground",
                     )}
                   >
-                    <ArrowSquareOutIcon className="size-3.5" />
+                    <ArrowSquareOutIcon className="size-3.5" aria-hidden />
                   </a>
                 }
               />
@@ -141,7 +145,7 @@ export function WidgetFrame({
               onMouseDown={(event) => event.stopPropagation()}
               onClick={() => onConfigure(id)}
             >
-              <GearSixIcon className="size-3.5" />
+              <GearSixIcon className="size-3.5" aria-hidden />
             </Button>
           ) : null}
           {editMode ? (
@@ -149,12 +153,12 @@ export function WidgetFrame({
               type="button"
               size="icon-sm"
               variant="ghost"
-              aria-label="Remove widget"
+              aria-label={`Remove ${heading}`}
               onPointerDown={(event) => event.stopPropagation()}
               onMouseDown={(event) => event.stopPropagation()}
               onClick={() => onRemove(id)}
             >
-              <TrashIcon className="size-3.5" />
+              <TrashIcon className="size-3.5" aria-hidden />
             </Button>
           ) : null}
         </div>

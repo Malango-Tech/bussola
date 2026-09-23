@@ -2,6 +2,7 @@
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { cn } from "@/lib/utils";
+import { shareSummary } from "./chart-summary";
 
 export type DonutChartItem = {
   id: string;
@@ -14,6 +15,8 @@ export type DonutChartItem = {
 
 type DonutChartProps = {
   items: DonutChartItem[];
+  /** What the whole is, e.g. "Account balances" — the start of its accessible name. */
+  label?: string;
   className?: string;
 };
 
@@ -26,7 +29,7 @@ const CHART_COLORS = [
 ];
 
 /** A donut chart with a legend, for showing how a total splits into parts. */
-export function DonutChart({ items, className }: DonutChartProps) {
+export function DonutChart({ items, label = "Chart", className }: DonutChartProps) {
   const slices = items
     .map((item) => ({ ...item, value: Math.max(item.value, 0) }))
     .filter((item) => item.value > 0);
@@ -44,9 +47,13 @@ export function DonutChart({ items, className }: DonutChartProps) {
         className,
       )}
     >
-      <div className="relative h-full min-h-[120px] w-full">
+      <div
+        className="relative h-full min-h-[120px] w-full"
+        role="img"
+        aria-label={shareSummary(label, slices)}
+      >
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
+          <PieChart accessibilityLayer={false}>
             <Pie
               data={slices}
               dataKey="value"
@@ -89,6 +96,7 @@ export function DonutChart({ items, className }: DonutChartProps) {
           <li key={item.id} className="flex items-start gap-2 text-xs">
             <span
               className="mt-1 size-2 shrink-0 rounded-full"
+              aria-hidden
               style={{
                 background:
                   item.value > 0

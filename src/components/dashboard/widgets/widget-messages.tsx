@@ -16,7 +16,10 @@ export function WidgetMessage({
   action?: { href: string; label: string };
 }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-1.5 px-3 text-center">
+    <div
+      data-slot="widget-message"
+      className="flex h-full flex-col items-center justify-center gap-1.5 px-3 text-center"
+    >
       <p className="text-sm text-muted-foreground text-balance">{title}</p>
       {action ? (
         <Link
@@ -61,7 +64,7 @@ export function DemoNotice({ provider }: { provider?: string }) {
   return (
     <div className="mb-2 flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1">
       <Badge variant="secondary" className="gap-1">
-        <SparkleIcon className="size-3" />
+        <SparkleIcon className="size-3" aria-hidden />
         Demo data
       </Badge>
       <Link
