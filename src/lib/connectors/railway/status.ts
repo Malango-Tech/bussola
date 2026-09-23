@@ -1,5 +1,6 @@
-import type { RailwayDeployHealth, TrackerPoint } from "../types";
+import type { RailwayDeployHealth } from "../types";
 import { friendlyStatusLabel } from "../errors";
+import type { Tone } from "../shared/tone";
 
 /**
  * Railway's raw deployment statuses, and everything the dashboard reads off
@@ -7,7 +8,6 @@ import { friendlyStatusLabel } from "../errors";
  * behind is live?" calculation.
  */
 
-export type Tone = TrackerPoint["status"];
 export type ActiveStatus = RailwayDeployHealth["active"]["status"];
 
 type StatusSpec = {
@@ -37,23 +37,12 @@ const RAILWAY_STATUS: Record<string, StatusSpec> = {
   SKIPPED: { tone: "idle", label: "Skipped", stage: "Skipped", active: "unknown" },
 };
 
-const TONE_CLASS: Record<Tone, string> = {
-  ok: "bg-success",
-  warn: "bg-warning",
-  error: "bg-destructive",
-  idle: "bg-muted-foreground/30",
-};
-
 function statusSpec(raw?: string): StatusSpec | undefined {
   return raw ? RAILWAY_STATUS[raw.toUpperCase()] : undefined;
 }
 
 export function statusColor(status: string): Tone {
   return statusSpec(status)?.tone ?? "idle";
-}
-
-export function colorFor(status: Tone): string {
-  return TONE_CLASS[status];
 }
 
 export function rawStatusLabel(raw: string): string {

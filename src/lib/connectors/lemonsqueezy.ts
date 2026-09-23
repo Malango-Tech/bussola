@@ -8,6 +8,9 @@ import type {
 } from "./types";
 import { toUserFacingError } from "./errors";
 import { fetchJson } from "./http";
+import { daysAgo } from "./shared/dates";
+import { toMajor } from "./shared/money";
+import { collectPages } from "./shared/pagination";
 
 const BASE = "https://api.lemonsqueezy.com/v1";
 const RECENT_ORDERS = 25;
@@ -66,11 +69,6 @@ type SubscriptionInvoiceAttributes = {
   billing_reason?: string;
   created_at?: string;
 };
-
-/** Lemon Squeezy reports money in cents. */
-function toMajor(amount: number | undefined): number {
-  return (amount ?? 0) / 100;
-}
 
 export function orderStatus(status?: string): PaymentItem["status"] {
   switch (status) {
@@ -157,19 +155,17 @@ export async function fetchLemonSqueezyDashboard(
 
   // Subscriptions are paginated; cap the walk so one huge store cannot stall
   // the sync worker's whole batch.
-  const subscriptions: Array<{ attributes: SubscriptionAttributes }> = [];
-  let truncated = false;
-  for (let page = 1; page <= SUBSCRIPTION_PAGES; page++) {
+  const { items: subscriptions, truncated } = await collectPages<
+    { attributes: SubscriptionAttributes },
+    number
+  >(async (page = 1) => {
     const list = await lsFetch<JsonApiList<SubscriptionAttributes>>(
       key,
       `/subscriptions?page[size]=${PER_PAGE}&page[number]=${page}`,
     );
-    subscriptions.push(...list.data);
-
     const lastPage = list.meta?.page?.lastPage ?? page;
-    if (page >= lastPage) break;
-    if (page === SUBSCRIPTION_PAGES) truncated = true;
-  }
+    return { items: list.data, next: page < lastPage ? page + 1 : null };
+  }, SUBSCRIPTION_PAGES);
 
   // MRR from the most recent paid subscription invoices, normalised to a month.
   const mrrByStatus = new Map<string, number>();
@@ -179,7 +175,7 @@ export async function fetchLemonSqueezyDashboard(
   ).catch(() => null);
 
   if (invoices) {
-    const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const monthAgo = daysAgo(30).getTime();
     const recent = invoices.data.filter((invoice) => {
       const created = invoice.attributes.created_at;
       return created ? new Date(created).getTime() >= monthAgo : false;

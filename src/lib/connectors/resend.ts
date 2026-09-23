@@ -14,6 +14,7 @@ import type {
 } from "./types";
 import { toUserFacingError } from "./errors";
 import { fetchJson } from "./http";
+import { daysAgo } from "./shared/dates";
 
 const BASE = "https://api.resend.com";
 const RECENT_EMAILS = 25;
@@ -165,7 +166,7 @@ function num(value: unknown): number {
 }
 
 function isoDaysAgo(days: number): string {
-  return new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+  return daysAgo(days).toISOString().slice(0, 10);
 }
 
 function dayLabel(period: string): string {

@@ -9,6 +9,7 @@ import type {
 } from "./types";
 import { toUserFacingError } from "./errors";
 import { fetchJson } from "./http";
+import { toneClass } from "./shared/tone";
 
 const BASE = "https://api.vercel.com";
 const MAX_PROJECTS = 20;
@@ -68,23 +69,6 @@ export function deployStatus(state?: string): TrackerPoint["status"] {
 export function deployStateLabel(state?: string): string {
   if (!state) return "Unknown";
   return state.charAt(0) + state.slice(1).toLowerCase();
-}
-
-function colorFor(status: TrackerPoint["status"]): string {
-  switch (status) {
-    case "ok":
-      return "bg-success";
-    case "warn":
-      return "bg-warning";
-    case "error":
-      return "bg-destructive";
-    case "idle":
-      return "bg-muted-foreground/30";
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
 }
 
 function deploymentTime(deployment: VercelDeployment): number {
@@ -175,7 +159,7 @@ export async function fetchVercelDashboard(
       const status = deployStatus(deployment.readyState ?? deployment.state);
       return {
         key: deployment.uid,
-        color: colorFor(status),
+        color: toneClass(status),
         status,
         tooltip: `${deployStateLabel(
           deployment.readyState ?? deployment.state,

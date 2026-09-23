@@ -11,6 +11,8 @@ import type {
 } from "./types";
 import { toUserFacingError } from "./errors";
 import { fetchJson } from "./http";
+import { byNewest, byOldest } from "./shared/dates";
+import { toneClass } from "./shared/tone";
 
 const BASE = "https://api.netlify.com/api/v1";
 const MAX_SITES = 20;
@@ -50,23 +52,6 @@ function mapState(state?: string): TrackerPoint["status"] {
       return "warn";
     default:
       return "idle";
-  }
-}
-
-function colorFor(status: TrackerPoint["status"]): string {
-  switch (status) {
-    case "ok":
-      return "bg-success";
-    case "warn":
-      return "bg-warning";
-    case "error":
-      return "bg-destructive";
-    case "idle":
-      return "bg-muted-foreground/30";
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
   }
 }
 
@@ -131,10 +116,7 @@ function buildDeployTrail(
   fallbackState?: string,
 ): { points: TrackerPoint[]; detail: string } {
   const chronological = [...deploys]
-    .sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    )
+    .sort(byOldest((d) => d.created_at))
     .slice(-DEPLOYS_PER_SITE);
 
   if (chronological.length === 0) {
@@ -146,7 +128,7 @@ function buildDeployTrail(
       points: [
         {
           key: "published",
-          color: colorFor(status),
+          color: toneClass(status),
           tooltip: `${siteName}: ${deployStateLabel(fallbackState)}`,
           status,
         },
@@ -159,7 +141,7 @@ function buildDeployTrail(
     const status = mapState(d.state);
     return {
       key: d.id,
-      color: colorFor(status),
+      color: toneClass(status),
       tooltip: `${deployStateLabel(d.state)}${d.branch ? ` · ${d.branch}` : ""}`,
       status,
     };
@@ -311,10 +293,7 @@ export async function fetchNetlifyDashboard(
     }
   }
 
-  recentDeploys.sort(
-    (a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+  recentDeploys.sort(byNewest((d) => d.createdAt));
   forms.sort((a, b) => b.submissionCount - a.submissionCount);
 
   // Resolve account for build minutes.

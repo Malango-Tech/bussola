@@ -1,4 +1,5 @@
 import type { RailwayBilling } from "../types";
+import { toMajor } from "../shared/money";
 import { railwayGraphql, type AuthMode } from "./client";
 
 /**
@@ -46,7 +47,7 @@ function toBilling(
     plan,
     currency: "usd",
     // Reported in cents; every other figure here is already in dollars.
-    estimatedBill: typeof cents === "number" ? cents / 100 : null,
+    estimatedBill: typeof cents === "number" ? toMajor(cents) : null,
     currentUsage:
       typeof customer.currentUsage === "number" ? customer.currentUsage : null,
     creditBalance:

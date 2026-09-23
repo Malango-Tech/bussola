@@ -3,10 +3,11 @@ import type {
   RailwayDeployHealth,
   TrackerPoint,
 } from "../types";
+import { byNewest, byOldest } from "../shared/dates";
+import { toneClass } from "../shared/tone";
 import { railwayGraphql, type AuthMode } from "./client";
 import {
   activeStatusFromRaw,
-  colorFor,
   deployStage,
   isFailedAttemptStatus,
   isInFlightStatus,
@@ -50,10 +51,7 @@ export function buildServiceDeployHealth(
   deployments: DeploymentNode[],
   service: { id: string; name: string; projectName: string },
 ): RailwayDeployHealth {
-  const newestFirst = [...deployments].sort(
-    (a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+  const newestFirst = [...deployments].sort(byNewest((d) => d.createdAt));
 
   const failedSinceActive: RailwayDeployAttempt[] = [];
   let inFlight: RailwayDeployAttempt | null = null;
@@ -125,10 +123,7 @@ export function buildDeployTrail(
   latestStatus?: string,
 ): { points: TrackerPoint[]; detail: string } {
   const chronological = [...deployments]
-    .sort(
-      (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-    )
+    .sort(byOldest((d) => d.createdAt))
     .slice(-DEPLOY_TRAIL_LEN);
 
   if (chronological.length === 0) {
@@ -140,7 +135,7 @@ export function buildDeployTrail(
       points: [
         {
           key: "latest",
-          color: colorFor(status),
+          color: toneClass(status),
           tooltip: `${serviceName}: ${rawStatusLabel(latestStatus)}`,
           status,
         },
@@ -153,7 +148,7 @@ export function buildDeployTrail(
     const status = statusColor(d.status);
     return {
       key: d.id,
-      color: colorFor(status),
+      color: toneClass(status),
       tooltip: `${serviceName}: ${rawStatusLabel(d.status)}`,
       status,
     };

@@ -9,6 +9,7 @@ import type {
   StatusItem,
   TrackerPoint,
 } from "../types";
+import { byNewest } from "../shared/dates";
 import { resolveRailwayAuth } from "./client";
 import { fetchBilling } from "./billing";
 import {
@@ -232,10 +233,7 @@ export async function fetchRailwayDashboard(
 
   projectSummaries.sort((a, b) => b.serviceCount - a.serviceCount);
 
-  recentDeploys.sort(
-    (a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+  recentDeploys.sort(byNewest((d) => d.createdAt));
 
   const deployHealth = pickPrimaryDeployHealth(deployHealthCandidates);
 
