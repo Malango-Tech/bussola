@@ -81,7 +81,7 @@ export function AlertsManager({
               variant="outline"
               onClick={alerts.acknowledgeAll}
             >
-              <CheckIcon className="size-4" />
+              <CheckIcon className="size-4" aria-hidden />
               Acknowledge {unacknowledged}
             </Button>
           ) : null
@@ -90,7 +90,10 @@ export function AlertsManager({
 
       {!alertsAvailable ? (
         <div className="flex items-start gap-2.5 rounded-lg border border-border bg-muted/40 p-4">
-          <WarningIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          <WarningIcon
+            aria-hidden
+            className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+          />
           <div className="space-y-1 text-sm">
             <p className="font-medium">
               Alerts are not part of the {planName} plan.

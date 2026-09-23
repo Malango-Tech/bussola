@@ -16,6 +16,8 @@ import {
   type NewChannel,
 } from "./types";
 
+const CHANNEL_FORM_ID = "new-channel-form";
+
 type Props = {
   channels: ChannelRow[];
   /** Kinds this plan allows; empty when alerts are not on the plan at all. */
@@ -57,9 +59,11 @@ export function ChannelsSection({
               type="button"
               variant="outline"
               size="sm"
+              aria-expanded={showForm}
+              aria-controls={showForm ? CHANNEL_FORM_ID : undefined}
               onClick={() => setShowForm((open) => !open)}
             >
-              <PlusIcon className="size-4" />
+              <PlusIcon className="size-4" aria-hidden />
               Add channel
             </Button>
           ) : null
@@ -74,6 +78,7 @@ export function ChannelsSection({
 
       {showForm && canManage ? (
         <ChannelForm
+          id={CHANNEL_FORM_ID}
           allowedChannels={allowedChannels}
           emailReady={emailReady}
           emailSetupHint={emailSetupHint}
@@ -127,7 +132,10 @@ function ChannelItem({
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{channel.label}</p>
         {channel.lastError ? (
-          <p className="truncate text-xs text-destructive">{channel.lastError}</p>
+          <p className="truncate text-xs text-destructive">
+            <span className="sr-only">Last delivery failed: </span>
+            {channel.lastError}
+          </p>
         ) : channel.lastDeliveredAt ? (
           <p className="text-xs text-muted-foreground">
             Last delivered{" "}
@@ -146,19 +154,20 @@ function ChannelItem({
             variant="outline"
             size="sm"
             disabled={testing}
+            aria-label={`Send test to ${channel.label}`}
             onClick={() => onTest(channel)}
           >
-            <PaperPlaneTiltIcon className="size-3.5" />
+            <PaperPlaneTiltIcon className="size-3.5" aria-hidden />
             {testing ? "Sending…" : "Send test"}
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label="Remove channel"
+            aria-label={`Remove channel ${channel.label}`}
             onClick={() => onDelete(channel.id)}
           >
-            <TrashIcon className="size-4" />
+            <TrashIcon className="size-4" aria-hidden />
           </Button>
         </>
       ) : null}

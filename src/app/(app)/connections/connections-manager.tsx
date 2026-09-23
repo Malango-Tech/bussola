@@ -107,8 +107,14 @@ export function ConnectionsManager({
               <Tooltip key={provider}>
                 <TooltipTrigger
                   render={
-                    <Badge variant="outline" className="gap-1.5">
-                      <SourceIcon provider={provider} className="size-3" />
+                    // Focusable, so the note behind it opens from the keyboard
+                    // as well as on hover.
+                    <Badge variant="outline" className="gap-1.5" tabIndex={0}>
+                      <SourceIcon
+                        provider={provider}
+                        className="size-3"
+                        decorative
+                      />
                       {entry.name}
                     </Badge>
                   }

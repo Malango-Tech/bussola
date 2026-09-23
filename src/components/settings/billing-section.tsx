@@ -193,11 +193,16 @@ function IntervalToggle({
   onChange: (next: Interval) => void;
 }) {
   return (
-    <div className="inline-flex rounded-lg border border-border p-0.5">
+    <div
+      role="group"
+      aria-label="Billing interval"
+      className="inline-flex rounded-lg border border-border p-0.5"
+    >
       {(["monthly", "yearly"] as const).map((option) => (
         <button
           key={option}
           type="button"
+          aria-pressed={value === option}
           onClick={() => onChange(option)}
           className={cn(
             "rounded-[calc(var(--radius-md)-2px)] px-2.5 py-1 text-xs font-medium capitalize transition-colors",

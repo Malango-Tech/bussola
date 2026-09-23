@@ -129,9 +129,9 @@ export function ConnectionDialog({
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="label">Name</Label>
+            <Label htmlFor="connection-label">Name</Label>
             <Input
-              id="label"
+              id="connection-label"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder={entry.name}
@@ -140,11 +140,11 @@ export function ConnectionDialog({
 
           {entry.fields.includes("apiKey") ? (
             <div className="space-y-2">
-              <Label htmlFor="apiKey">
+              <Label htmlFor="connection-api-key">
                 {provider === "qonto" ? "API key (login:secret)" : "API token"}
               </Label>
               <Input
-                id="apiKey"
+                id="connection-api-key"
                 type="password"
                 value={apiKey}
                 onChange={field("apiKey")}
@@ -157,11 +157,11 @@ export function ConnectionDialog({
 
           {entry.fields.includes("orgSlug") ? (
             <div className="space-y-2">
-              <Label htmlFor="orgSlug">
+              <Label htmlFor="connection-org-slug">
                 {entry.orgSlugLabel || "Organization"}
               </Label>
               <Input
-                id="orgSlug"
+                id="connection-org-slug"
                 value={orgSlug}
                 onChange={field("orgSlug")}
                 autoComplete="off"
@@ -172,18 +172,18 @@ export function ConnectionDialog({
           {entry.fields.includes("login") ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="login">Or login</Label>
+                <Label htmlFor="connection-login">Or login</Label>
                 <Input
-                  id="login"
+                  id="connection-login"
                   value={login}
                   onChange={field("login")}
                   autoComplete="off"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="secretKey">Secret key</Label>
+                <Label htmlFor="connection-secret-key">Secret key</Label>
                 <Input
-                  id="secretKey"
+                  id="connection-secret-key"
                   type="password"
                   value={secretKey}
                   onChange={field("secretKey")}
@@ -205,7 +205,8 @@ export function ConnectionDialog({
                   className="inline-flex items-center gap-1 text-foreground underline-offset-4 hover:underline"
                 >
                   Open {entry.name}
-                  <ArrowSquareOutIcon className="size-3" />
+                  <ArrowSquareOutIcon className="size-3" aria-hidden />
+                  <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </>
             ) : null}

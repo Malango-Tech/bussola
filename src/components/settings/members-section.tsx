@@ -134,7 +134,7 @@ export function MembersSection() {
 
   if (loading) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-3" role="status" aria-label="Loading members">
         <Skeleton className="h-5 w-32" />
         <Skeleton className="h-24 w-full" />
       </div>
@@ -143,7 +143,7 @@ export function MembersSection() {
 
   if (!data) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p role="alert" className="text-sm text-muted-foreground">
         Could not load members. Try reopening settings.
       </p>
     );
@@ -204,7 +204,7 @@ export function MembersSection() {
                   aria-label={`Remove ${member.email}`}
                   onClick={() => remove(member.id)}
                 >
-                  <TrashIcon className="size-4" />
+                  <TrashIcon className="size-4" aria-hidden />
                 </Button>
               ) : null}
             </li>
@@ -239,7 +239,7 @@ export function MembersSection() {
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  aria-label="Copy invitation link"
+                  aria-label={`Copy invitation link for ${invitation.email}`}
                   onClick={() => {
                     void navigator.clipboard
                       .writeText(
@@ -249,17 +249,17 @@ export function MembersSection() {
                       .catch(() => toast.error("Could not copy"));
                   }}
                 >
-                  <CopyIcon className="size-4" />
+                  <CopyIcon className="size-4" aria-hidden />
                 </Button>
                 {canManage ? (
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="Revoke invitation"
+                    aria-label={`Revoke invitation for ${invitation.email}`}
                     onClick={() => revoke(invitation.id)}
                   >
-                    <TrashIcon className="size-4" />
+                    <TrashIcon className="size-4" aria-hidden />
                   </Button>
                 ) : null}
               </li>
@@ -281,7 +281,7 @@ export function MembersSection() {
 
           {!data.emailConfigured ? (
             <p className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-              <WarningIcon className="mt-0.5 size-3.5 shrink-0" />
+              <WarningIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
               <span>
                 No mail provider is configured, so invitations are not emailed —
                 copy the link and send it yourself. {data.emailSetupHint}
@@ -324,6 +324,7 @@ export function MembersSection() {
             <div className="flex items-center gap-2">
               <Input
                 readOnly
+                aria-label="Invitation link"
                 value={lastInviteLink}
                 onFocus={(event) => event.currentTarget.select()}
                 className="font-mono text-xs"
@@ -340,7 +341,7 @@ export function MembersSection() {
                     .catch(() => toast.error("Could not copy"));
                 }}
               >
-                <CopyIcon className="size-4" />
+                <CopyIcon className="size-4" aria-hidden />
               </Button>
             </div>
           ) : null}

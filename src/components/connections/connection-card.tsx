@@ -74,13 +74,15 @@ export function ConnectionCard({
 
   return (
     <div
+      role="group"
+      aria-label={entry.name}
       className={cn(
         "flex flex-col gap-3 rounded-lg border border-border bg-card p-4",
         state?.tone === "error" && "border-destructive/40",
       )}
     >
       <div className="flex items-start gap-3">
-        <SourceIcon provider={provider} className="mt-0.5 size-5" />
+        <SourceIcon provider={provider} className="mt-0.5 size-5" decorative />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="truncate text-sm font-medium">{entry.name}</p>
@@ -148,9 +150,10 @@ export function ConnectionCard({
               variant="outline"
               size="xs"
               disabled={busy}
+              aria-label={`Refresh ${entry.name}`}
               onClick={() => onRefresh(connection)}
             >
-              <ArrowClockwiseIcon className="size-3" />
+              <ArrowClockwiseIcon className="size-3" aria-hidden />
               Refresh
             </Button>
             <Button
@@ -158,6 +161,7 @@ export function ConnectionCard({
               variant="ghost"
               size="xs"
               disabled={busy}
+              aria-label={`Test ${entry.name} credentials`}
               onClick={() => onTest(connection)}
             >
               Test
@@ -174,7 +178,7 @@ export function ConnectionCard({
                         aria-label={`Edit ${entry.name} connection`}
                         onClick={() => onEdit(connection)}
                       >
-                        <PencilSimpleIcon className="size-3" />
+                        <PencilSimpleIcon className="size-3" aria-hidden />
                       </Button>
                     }
                   />
@@ -191,7 +195,7 @@ export function ConnectionCard({
                         disabled={busy}
                         onClick={() => onRemove(connection)}
                       >
-                        <TrashIcon className="size-3" />
+                        <TrashIcon className="size-3" aria-hidden />
                       </Button>
                     }
                   />
@@ -210,7 +214,7 @@ export function ConnectionCard({
             aria-describedby={canManage ? undefined : permissionHintId}
             onClick={onConnect}
           >
-            <PlugsIcon className="size-3" />
+            <PlugsIcon className="size-3" aria-hidden />
             Connect
           </Button>
           {entry.docsUrl ? (
@@ -221,7 +225,8 @@ export function ConnectionCard({
               className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
             >
               Get a token
-              <ArrowSquareOutIcon className="size-3" />
+              <ArrowSquareOutIcon className="size-3" aria-hidden />
+              <span className="sr-only"> (opens in a new tab)</span>
             </a>
           ) : null}
         </div>

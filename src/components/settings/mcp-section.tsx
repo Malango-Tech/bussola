@@ -98,7 +98,7 @@ export function McpSection() {
 
   if (loading) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-3" role="status" aria-label="Loading tokens">
         <Skeleton className="h-5 w-32" />
         <Skeleton className="h-24 w-full" />
       </div>
@@ -107,7 +107,7 @@ export function McpSection() {
 
   if (!data) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p role="alert" className="text-sm text-muted-foreground">
         Could not load tokens. Try reopening settings.
       </p>
     );
@@ -141,7 +141,10 @@ export function McpSection() {
 
         {!data.canUseMcp ? (
           <p className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-sm">
-            <WarningIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <WarningIcon
+              aria-hidden
+              className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+            />
             <span>
               The MCP server is not part of the {data.planName} plan. Solo and
               Team both include it, and self-hosted has it unlocked.
@@ -151,13 +154,17 @@ export function McpSection() {
       </section>
 
       {freshToken ? (
-        <section className="space-y-2 rounded-lg border border-success/40 bg-success/5 p-3">
-          <p className="text-sm font-medium">
+        <section
+          aria-labelledby="fresh-token-title"
+          className="space-y-2 rounded-lg border border-success/40 bg-success/5 p-3"
+        >
+          <p id="fresh-token-title" role="status" className="text-sm font-medium">
             Copy this token now — it is not shown again.
           </p>
           <div className="flex items-center gap-2">
             <Input
               readOnly
+              aria-label="New token"
               value={freshToken}
               onFocus={(event) => event.currentTarget.select()}
               className="font-mono text-xs"
@@ -169,7 +176,7 @@ export function McpSection() {
               aria-label="Copy token"
               onClick={() => copy(freshToken)}
             >
-              <CopyIcon className="size-4" />
+              <CopyIcon className="size-4" aria-hidden />
             </Button>
           </div>
 
@@ -278,7 +285,7 @@ export function McpSection() {
                     aria-label={`Revoke ${token.name}`}
                     onClick={() => revoke(token.id)}
                   >
-                    <ProhibitIcon className="size-4" />
+                    <ProhibitIcon className="size-4" aria-hidden />
                   </Button>
                 ) : null}
               </li>

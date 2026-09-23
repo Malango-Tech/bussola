@@ -43,12 +43,15 @@ function channelFormReducer(
 }
 
 export function ChannelForm({
+  id,
   allowedChannels,
   emailReady,
   emailSetupHint,
   onCancel,
   onCreate,
 }: {
+  /** For the toggle that opens it to point `aria-controls` at. */
+  id?: string;
   allowedChannels: ChannelKind[];
   emailReady: boolean;
   emailSetupHint: string;
@@ -68,7 +71,12 @@ export function ChannelForm({
   const emailUnconfigured = kind === "email" && !emailReady;
 
   return (
-    <div className="space-y-4 rounded-lg border border-border p-4">
+    <div
+      id={id}
+      role="group"
+      aria-label="New channel"
+      className="space-y-4 rounded-lg border border-border p-4"
+    >
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="space-y-1.5">
           <Label htmlFor="channel-kind">Type</Label>
@@ -105,6 +113,8 @@ export function ChannelForm({
           </Label>
           <Input
             id="channel-target"
+            type={kind === "email" ? "email" : "url"}
+            aria-describedby={emailUnconfigured ? "channel-email-hint" : undefined}
             value={target}
             placeholder={CHANNEL_PLACEHOLDER[kind]}
             onChange={(event) =>
@@ -115,8 +125,11 @@ export function ChannelForm({
       </div>
 
       {emailUnconfigured ? (
-        <p className="flex items-start gap-2 text-xs text-warning">
-          <WarningIcon className="mt-0.5 size-3.5 shrink-0" />
+        <p
+          id="channel-email-hint"
+          className="flex items-start gap-2 text-xs text-warning"
+        >
+          <WarningIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
           {emailSetupHint}
         </p>
       ) : null}

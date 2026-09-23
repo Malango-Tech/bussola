@@ -18,6 +18,8 @@ import {
   type RuleRow,
 } from "./types";
 
+const RULE_FORM_ID = "new-rule-form";
+
 type Props = {
   rules: RuleRow[];
   /** Connections with at least one metric; the only ones a rule can watch. */
@@ -52,9 +54,11 @@ export function RulesSection({
               type="button"
               variant="outline"
               size="sm"
+              aria-expanded={showForm}
+              aria-controls={showForm ? RULE_FORM_ID : undefined}
               onClick={() => setShowForm((open) => !open)}
             >
-              <PlusIcon className="size-4" />
+              <PlusIcon className="size-4" aria-hidden />
               New rule
             </Button>
           ) : null
@@ -63,6 +67,7 @@ export function RulesSection({
 
       {showForm ? (
         <RuleForm
+          id={RULE_FORM_ID}
           connections={alertable}
           metrics={metrics}
           channels={channels}
@@ -119,6 +124,8 @@ function RuleItem({
   onDelete: Props["onDelete"];
 }) {
   const muted = rule.mutedUntil && new Date(rule.mutedUntil) > new Date();
+  /** Which rule a control acts on, for anyone who cannot see the row. */
+  const name = `${metric?.label ?? rule.metric} on ${rule.connectionLabel}`;
 
   return (
     <li className="flex items-center gap-3 px-4 py-3">
@@ -157,24 +164,30 @@ function RuleItem({
         type="button"
         variant="ghost"
         size="icon-sm"
-        aria-label={muted ? "Unmute rule" : "Mute for 24 hours"}
+        aria-label={
+          muted ? `Unmute rule: ${name}` : `Mute rule for 24 hours: ${name}`
+        }
         onClick={() => onPatch(rule.id, { muteHours: muted ? 0 : 24 })}
       >
-        <BellSlashIcon className={cn("size-4", muted && "text-warning")} />
+        <BellSlashIcon
+          aria-hidden
+          className={cn("size-4", muted && "text-warning")}
+        />
       </Button>
+      {/* A switch announces its own state, so the name is only the rule. */}
       <Switch
         checked={rule.enabled}
-        aria-label={`${rule.enabled ? "Disable" : "Enable"} rule`}
+        aria-label={`Rule enabled: ${name}`}
         onCheckedChange={(checked) => onPatch(rule.id, { enabled: checked })}
       />
       <Button
         type="button"
         variant="ghost"
         size="icon-sm"
-        aria-label="Delete rule"
+        aria-label={`Delete rule: ${name}`}
         onClick={() => onDelete(rule.id)}
       >
-        <TrashIcon className="size-4" />
+        <TrashIcon className="size-4" aria-hidden />
       </Button>
     </li>
   );

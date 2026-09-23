@@ -32,7 +32,13 @@ export function EventsFeed({ events }: { events: EventRow[] }) {
                 aria-hidden
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate">{event.message}</p>
+                <p className="truncate">
+                  {/* The dot's colour, for anyone who cannot see it. */}
+                  <span className="sr-only">
+                    {event.state === "breached" ? "Breached: " : "Recovered: "}
+                  </span>
+                  {event.message}
+                </p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                   <SourceIcon provider={event.provider} className="size-3" />
                   {event.connectionLabel} ·{" "}

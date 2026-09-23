@@ -105,12 +105,15 @@ export function initialRuleForm(
 }
 
 export function RuleForm({
+  id,
   connections,
   metrics,
   channels,
   onCancel,
   onCreate,
 }: {
+  /** For the toggle that opens it to point `aria-controls` at. */
+  id?: string;
   connections: AlertableConnection[];
   metrics: MetricOption[];
   channels: ChannelRow[];
@@ -153,7 +156,12 @@ export function RuleForm({
     Boolean(form.connectionId && form.metricKey) && Number.isFinite(numeric);
 
   return (
-    <div className="space-y-4 rounded-lg border border-border p-4">
+    <div
+      id={id}
+      role="group"
+      aria-label="New rule"
+      className="space-y-4 rounded-lg border border-border p-4"
+    >
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="rule-connection">Source</Label>
@@ -174,6 +182,7 @@ export function RuleForm({
           <Label htmlFor="rule-metric">Watch</Label>
           <Select
             id="rule-metric"
+            aria-describedby={metric ? "rule-metric-description" : undefined}
             value={form.metricKey}
             onChange={(event) => chooseMetric(event.target.value)}
           >
@@ -184,7 +193,12 @@ export function RuleForm({
             ))}
           </Select>
           {metric ? (
-            <p className="text-xs text-muted-foreground">{metric.description}</p>
+            <p
+              id="rule-metric-description"
+              className="text-xs text-muted-foreground"
+            >
+              {metric.description}
+            </p>
           ) : null}
         </div>
 
@@ -225,6 +239,7 @@ export function RuleForm({
           <Label htmlFor="rule-cooldown">Don’t repeat within</Label>
           <Select
             id="rule-cooldown"
+            aria-describedby="rule-cooldown-hint"
             value={String(form.cooldown)}
             onChange={(event) =>
               dispatch({ type: "cooldown", value: Number(event.target.value) })
@@ -236,14 +251,20 @@ export function RuleForm({
               </option>
             ))}
           </Select>
-          <p className="text-xs text-muted-foreground">
+          <p id="rule-cooldown-hint" className="text-xs text-muted-foreground">
             Recoveries are always sent immediately.
           </p>
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <Label>Notify</Label>
+      {/* Toggle buttons rather than one control, so they are grouped and
+          named by the label instead of being labelled by it. */}
+      <div
+        role="group"
+        aria-labelledby="rule-notify-label"
+        className="space-y-1.5"
+      >
+        <Label id="rule-notify-label">Notify</Label>
         {channels.length === 0 ? (
           <p className="text-xs text-muted-foreground">
             No channels yet — this rule will record here and nowhere else.
@@ -258,6 +279,7 @@ export function RuleForm({
                   type="button"
                   size="sm"
                   variant={on ? "default" : "outline"}
+                  aria-pressed={on}
                   onClick={() =>
                     dispatch({ type: "toggleChannel", id: channel.id })
                   }
