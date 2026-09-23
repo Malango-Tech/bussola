@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { toast } from "sonner";
+import { readJson } from "@/components/api-client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,6 +17,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PROVIDER_CATALOG } from "@/lib/connectors/catalog";
 import type { Provider } from "@/lib/providers";
+
+/** What the person types; only the fields this provider uses are shown. */
+type Credentials = {
+  apiKey: string;
+  login: string;
+  secretKey: string;
+  orgSlug: string;
+};
+
+const EMPTY_CREDENTIALS: Credentials = {
+  apiKey: "",
+  login: "",
+  secretKey: "",
+  orgSlug: "",
+};
 
 type Props = {
   provider: Provider;
@@ -43,11 +59,17 @@ export function ConnectionDialog({
 }: Props) {
   const entry = PROVIDER_CATALOG[provider];
   const [label, setLabel] = useState(currentLabel ?? entry.name);
-  const [apiKey, setApiKey] = useState("");
-  const [login, setLogin] = useState("");
-  const [secretKey, setSecretKey] = useState("");
-  const [orgSlug, setOrgSlug] = useState("");
+  const [credentials, setCredentials] = useState(EMPTY_CREDENTIALS);
   const [saving, setSaving] = useState(false);
+  const { apiKey, login, secretKey, orgSlug } = credentials;
+
+  /** An onChange for one credential field. */
+  const field =
+    (name: keyof Credentials) =>
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setCredentials((prev) => ({ ...prev, [name]: value }));
+    };
 
   const isEdit = Boolean(connectionId);
   const canSubmit = apiKey.trim().length > 0 || secretKey.trim().length > 0;
@@ -71,10 +93,9 @@ export function ConnectionDialog({
           test: true,
         }),
       });
-      const data = (await res.json()) as {
-        error?: string;
-        testResult?: { ok: boolean; message: string };
-      };
+      const data = await readJson<{
+        testResult: { ok: boolean; message: string } | null;
+      }>(res);
 
       if (!res.ok) {
         toast.error(data.error || "Could not save the connection");
@@ -126,7 +147,7 @@ export function ConnectionDialog({
                 id="apiKey"
                 type="password"
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                onChange={field("apiKey")}
                 autoComplete="off"
                 autoFocus
                 placeholder={isEdit ? "Enter a new token to replace the stored one" : undefined}
@@ -142,7 +163,7 @@ export function ConnectionDialog({
               <Input
                 id="orgSlug"
                 value={orgSlug}
-                onChange={(e) => setOrgSlug(e.target.value)}
+                onChange={field("orgSlug")}
                 autoComplete="off"
               />
             </div>
@@ -155,7 +176,7 @@ export function ConnectionDialog({
                 <Input
                   id="login"
                   value={login}
-                  onChange={(e) => setLogin(e.target.value)}
+                  onChange={field("login")}
                   autoComplete="off"
                 />
               </div>
@@ -165,7 +186,7 @@ export function ConnectionDialog({
                   id="secretKey"
                   type="password"
                   value={secretKey}
-                  onChange={(e) => setSecretKey(e.target.value)}
+                  onChange={field("secretKey")}
                   autoComplete="off"
                 />
               </div>
