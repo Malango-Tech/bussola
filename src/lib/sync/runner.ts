@@ -5,6 +5,7 @@ import { evaluateAlertsForConnection } from "@/lib/alerts/runner";
 import { parseCredentials } from "@/lib/connectors";
 import { toUserFacingError } from "@/lib/connectors/errors";
 import { createId } from "@/lib/id";
+import { logger } from "@/lib/log";
 import type { Provider } from "@/lib/providers";
 import {
   batchSize,
@@ -17,6 +18,8 @@ import {
 } from "./config";
 import { fetchDashboardSnapshot, isSyncable } from "./providers";
 import { recordHistory } from "./retention";
+
+const log = logger("sync");
 
 export type SyncOutcome = {
   connectionId: string;
@@ -221,9 +224,16 @@ export async function syncConnection(connection: {
     const { message, disabled } = await recordFailure(id, provider, error);
     // The user-facing message is stored on the connection, but without this the
     // only trace of *why* a sync failed is a "failed=1" count in the tick log.
-    console.warn(
-      `[sync] ${provider} failed${disabled ? " (now disabled)" : ""}: ${message}`,
-      error instanceof Error ? error.message : error,
+    log.warn(
+      "sync failed",
+      {
+        connectionId: id,
+        organizationId: connection.organizationId,
+        provider,
+        disabled,
+        reason: message,
+      },
+      error,
     );
     return { connectionId: id, provider, ok: false, error: message, disabled };
   }

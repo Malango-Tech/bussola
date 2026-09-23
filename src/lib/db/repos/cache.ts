@@ -1,7 +1,10 @@
 import { and, eq, lt } from "drizzle-orm";
 import { createId } from "@/lib/id";
+import { logger } from "@/lib/log";
 import { getDb } from "..";
 import { connectionCache } from "../schema";
+
+const log = logger("cache");
 
 const SWEEP_INTERVAL_MS = 60_000;
 let lastSweep = 0;
@@ -99,8 +102,17 @@ export function cacheRepo(org: string) {
         await set(cacheKey, data, ttlSeconds);
         return { data, cached: false };
       } catch (error) {
-        // Serving a stale payload beats showing an error for a transient blip.
-        if (row) return { data: row.payload, cached: true };
+        // Serving a stale payload beats showing an error for a transient blip
+        // — but the reader cannot tell, so the failure is logged here or not
+        // at all.
+        if (row) {
+          log.warn(
+            "fetch failed; serving stale cache entry",
+            { organizationId: org, cacheKey },
+            error,
+          );
+          return { data: row.payload, cached: true };
+        }
         throw error;
       }
     },

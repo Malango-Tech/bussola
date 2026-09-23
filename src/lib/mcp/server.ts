@@ -1,5 +1,8 @@
+import { logger } from "@/lib/log";
 import type { McpPrincipal } from "./auth";
 import { TOOLS, callTool } from "./tools";
+
+const log = logger("mcp");
 
 /**
  * A minimal Model Context Protocol server, over JSON-RPC 2.0.
@@ -141,7 +144,15 @@ export async function handleMessage(
         );
     }
   } catch (error) {
-    console.error("[mcp] handler failed:", error);
+    log.error(
+      "handler failed",
+      {
+        method: request.method,
+        organizationId: principal.organizationId,
+        tokenId: principal.tokenId,
+      },
+      error,
+    );
     return failure(id, INTERNAL_ERROR, "Internal error");
   }
 }

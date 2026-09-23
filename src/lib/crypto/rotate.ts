@@ -1,7 +1,10 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { connections, notificationChannels } from "@/lib/db/schema";
+import { logger } from "@/lib/log";
 import { decryptSecretDetailed, encryptSecret } from "./vault";
+
+const log = logger("vault");
 
 export type RotationReport = {
   reencrypted: number;
@@ -24,12 +27,20 @@ export async function reencryptLegacySecrets(): Promise<RotationReport> {
   const db = await getDb();
   const report: RotationReport = { reencrypted: 0, unreadable: 0 };
 
-  const rotate = (value: string): string | null => {
+  const rotate = (
+    value: string,
+    row: { table: string; id: string },
+  ): string | null => {
     try {
       const { plaintext, legacy } = decryptSecretDetailed(value);
       return legacy ? encryptSecret(plaintext) : null;
-    } catch {
+    } catch (error) {
+      // Counted and summarised below; the per-row line says which ones.
       report.unreadable += 1;
+      log.debug("stored secret could not be decrypted", {
+        ...row,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return null;
     }
   };
@@ -38,7 +49,7 @@ export async function reencryptLegacySecrets(): Promise<RotationReport> {
     .select({ id: connections.id, value: connections.credentialsEncrypted })
     .from(connections);
   for (const row of connectionRows) {
-    const next = rotate(row.value);
+    const next = rotate(row.value, { table: "connections", id: row.id });
     if (!next) continue;
     await db
       .update(connections)
@@ -54,7 +65,10 @@ export async function reencryptLegacySecrets(): Promise<RotationReport> {
     })
     .from(notificationChannels);
   for (const row of channelRows) {
-    const next = rotate(row.value);
+    const next = rotate(row.value, {
+      table: "notification_channels",
+      id: row.id,
+    });
     if (!next) continue;
     await db
       .update(notificationChannels)
@@ -64,13 +78,14 @@ export async function reencryptLegacySecrets(): Promise<RotationReport> {
   }
 
   if (report.reencrypted > 0) {
-    console.log(
-      `[bussola] re-encrypted ${report.reencrypted} stored secret(s) with the current key`,
-    );
+    log.info("re-encrypted stored secrets with the current key", {
+      count: report.reencrypted,
+    });
   }
   if (report.unreadable > 0) {
-    console.warn(
-      `[bussola] ${report.unreadable} stored secret(s) could not be decrypted with any known key — was BUSSOLA_ENCRYPTION_KEY changed?`,
+    log.warn(
+      "stored secrets could not be decrypted with any known key — was BUSSOLA_ENCRYPTION_KEY changed?",
+      { count: report.unreadable },
     );
   }
   return report;

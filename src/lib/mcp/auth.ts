@@ -2,7 +2,10 @@ import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { apiTokens, member, type ApiTokenScope } from "@/lib/db/schema";
 import { forTenant, type TenantRepos } from "@/lib/db/tenant";
+import { logger } from "@/lib/log";
 import { hashToken, looksLikeToken } from "@/lib/sharing/tokens";
+
+const log = logger("mcp");
 
 /**
  * Turning a bearer token into a tenant, for the MCP server.
@@ -87,8 +90,11 @@ async function touch(tokenId: string): Promise<void> {
       .update(apiTokens)
       .set({ lastUsedAt: new Date() })
       .where(eq(apiTokens.id, tokenId));
-  } catch {
-    // Never worth failing a tool call over.
+  } catch (error) {
+    // Never worth failing a tool call over — but a write failing here is
+    // likely failing elsewhere too, and a stale "last used" date is a poor
+    // place for the only trace of it.
+    log.warn("could not record token use", { tokenId }, error);
   }
 }
 
