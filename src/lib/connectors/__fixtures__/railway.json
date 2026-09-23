@@ -1,0 +1,343 @@
+{
+  "me": {
+    "data": {
+      "me": { "name": "Ada Lovelace", "email": "ada@example.com" }
+    }
+  },
+  "notAuthorized": {
+    "data": null,
+    "errors": [
+      {
+        "message": "Not Authorized",
+        "locations": [{ "line": 1, "column": 9 }],
+        "path": ["projectToken"],
+        "extensions": { "code": "UNAUTHENTICATED" },
+        "traceId": "5286403935459296283"
+      }
+    ]
+  },
+  "projectToken": {
+    "data": {
+      "projectToken": { "projectId": "prj_store", "environmentId": "env_prod" }
+    }
+  },
+  "projectName": {
+    "data": { "project": { "name": "storefront" } }
+  },
+  "apiToken": {
+    "data": {
+      "apiToken": {
+        "workspaces": [{ "id": "ws_acme", "name": "Acme" }]
+      }
+    }
+  },
+  "projects": {
+    "data": {
+      "projects": {
+        "edges": [
+          {
+            "node": {
+              "id": "prj_store",
+              "name": "storefront",
+              "environments": {
+                "edges": [
+                  { "node": { "id": "env_pr42", "name": "storefront-pr-42", "isEphemeral": true } },
+                  { "node": { "id": "env_prod", "name": "production", "isEphemeral": false } }
+                ]
+              },
+              "services": {
+                "edges": [
+                  {
+                    "node": {
+                      "id": "svc_api",
+                      "name": "api",
+                      "serviceInstances": {
+                        "edges": [
+                          {
+                            "node": {
+                              "environmentId": "env_pr42",
+                              "latestDeployment": {
+                                "id": "dep_api_pr",
+                                "status": "BUILDING",
+                                "createdAt": "2026-09-20T11:50:00.000Z",
+                                "meta": { "branch": "feat/checkout" }
+                              }
+                            }
+                          },
+                          {
+                            "node": {
+                              "environmentId": "env_prod",
+                              "latestDeployment": {
+                                "id": "dep_api_3",
+                                "status": "FAILED",
+                                "createdAt": "2026-09-20T09:00:00.000Z",
+                                "meta": {
+                                  "branch": "main",
+                                  "commitHash": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+                                  "commitMessage": "Bump prisma to 6.2\n\nRegenerates the client."
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "node": {
+                      "id": "svc_worker",
+                      "name": "worker",
+                      "serviceInstances": {
+                        "edges": [
+                          {
+                            "node": {
+                              "environmentId": "env_prod",
+                              "latestDeployment": {
+                                "id": "dep_wrk_2",
+                                "status": "CRASHED",
+                                "createdAt": "2026-09-20T07:30:00.000Z",
+                                "meta": {
+                                  "branch": "main",
+                                  "commitHash": "d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3",
+                                  "commitMessage": "Process refunds in batches"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "node": {
+              "id": "prj_docs",
+              "name": "docs",
+              "environments": {
+                "edges": [
+                  { "node": { "id": "env_docs", "name": "production", "isEphemeral": false } }
+                ]
+              },
+              "services": { "edges": [] }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "deploymentsStorefront": {
+    "data": {
+      "deployments": {
+        "edges": [
+          {
+            "node": {
+              "id": "dep_api_3",
+              "status": "FAILED",
+              "createdAt": "2026-09-20T09:00:00.000Z",
+              "serviceId": "svc_api",
+              "meta": {
+                "branch": "main",
+                "commitHash": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+                "commitMessage": "Bump prisma to 6.2\n\nRegenerates the client.",
+                "reason": "Build failed: exit code 1"
+              }
+            }
+          },
+          {
+            "node": {
+              "id": "dep_wrk_2",
+              "status": "CRASHED",
+              "createdAt": "2026-09-20T07:30:00.000Z",
+              "serviceId": "svc_worker",
+              "meta": {
+                "branch": "main",
+                "commitHash": "d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3",
+                "commitMessage": "Process refunds in batches"
+              }
+            }
+          },
+          {
+            "node": {
+              "id": "dep_api_2",
+              "status": "FAILED",
+              "createdAt": "2026-09-19T18:00:00.000Z",
+              "serviceId": "svc_api",
+              "meta": {
+                "branch": "main",
+                "commitHash": "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1",
+                "commitMessage": "Add readiness endpoint",
+                "reason": "Healthcheck timed out after 300s"
+              }
+            }
+          },
+          {
+            "node": {
+              "id": "dep_api_1",
+              "status": "SUCCESS",
+              "createdAt": "2026-09-18T10:00:00.000Z",
+              "serviceId": "svc_api",
+              "meta": {
+                "branch": "main",
+                "commitHash": "c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2",
+                "commitMessage": "Ship orders API"
+              }
+            }
+          },
+          {
+            "node": {
+              "id": "dep_wrk_1",
+              "status": "REMOVED",
+              "createdAt": "2026-09-17T07:30:00.000Z",
+              "serviceId": "svc_worker",
+              "meta": null
+            }
+          },
+          {
+            "node": {
+              "id": "dep_gone",
+              "status": "SUCCESS",
+              "createdAt": "2026-09-10T08:00:00.000Z",
+              "serviceId": "svc_deleted",
+              "meta": { "commitHash": "e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4" }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "deploymentsEmpty": {
+    "data": { "deployments": { "edges": [] } }
+  },
+  "metricsByService": {
+    "data": {
+      "metrics": [
+        {
+          "measurement": "CPU_USAGE",
+          "tags": { "serviceId": "svc_api" },
+          "values": [
+            { "ts": 1789900200, "value": 0.08 },
+            { "ts": 1789902000, "value": 0.12 }
+          ]
+        },
+        {
+          "measurement": "CPU_USAGE",
+          "tags": { "serviceId": "svc_worker" },
+          "values": [
+            { "ts": 1789900200, "value": 0.3 },
+            { "ts": 1789902000, "value": null }
+          ]
+        },
+        {
+          "measurement": "MEMORY_USAGE_GB",
+          "tags": { "serviceId": "svc_api" },
+          "values": [{ "ts": 1789902000, "value": 0.5 }]
+        },
+        {
+          "measurement": "MEMORY_USAGE_GB",
+          "tags": { "serviceId": "svc_worker" },
+          "values": []
+        }
+      ]
+    }
+  },
+  "metricsEmpty": {
+    "data": { "metrics": [] }
+  },
+  "metricsSeries": {
+    "data": {
+      "metrics": [
+        {
+          "measurement": "CPU_USAGE",
+          "values": [
+            { "ts": 1789900200, "value": 0.1 },
+            { "ts": "2026-09-20T10:45:00.000Z", "value": 0.4 },
+            { "ts": 1789902000, "value": null },
+            { "ts": 1789904700, "value": 0.25 }
+          ]
+        },
+        {
+          "measurement": "MEMORY_USAGE_GB",
+          "values": [
+            { "ts": 1789900200, "value": 0.75 },
+            { "ts": 1789904700, "value": 0.85 }
+          ]
+        },
+        {
+          "measurement": "NETWORK_TX_GB",
+          "values": [
+            { "ts": 1789900200, "value": 0.002 },
+            { "ts": 1789904700, "value": 0.004 }
+          ]
+        },
+        { "measurement": "DISK_USAGE_GB", "values": [] }
+      ]
+    }
+  },
+  "billingMe": {
+    "data": {
+      "me": {
+        "workspaces": [
+          { "name": "Ada's Projects", "plan": "HOBBY", "customer": null },
+          {
+            "name": "Acme",
+            "plan": "PRO",
+            "customer": {
+              "currentUsage": 18.42,
+              "creditBalance": 5,
+              "billingPeriod": {
+                "start": "2026-09-01T00:00:00.000Z",
+                "end": "2026-10-01T00:00:00.000Z"
+              },
+              "subscriptions": [
+                {
+                  "nextInvoiceCurrentTotal": 2599,
+                  "nextInvoiceDate": "2026-10-01T00:00:00.000Z"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "billingWorkspace": {
+    "data": {
+      "workspace": {
+        "name": "Acme",
+        "plan": "PRO",
+        "customer": {
+          "currentUsage": 7.5,
+          "creditBalance": 0,
+          "billingPeriod": {
+            "start": "2026-09-01T00:00:00.000Z",
+            "end": "2026-10-01T00:00:00.000Z"
+          },
+          "subscriptions": [
+            {
+              "nextInvoiceCurrentTotal": 1250,
+              "nextInvoiceDate": "2026-10-01T00:00:00.000Z"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "usageStorefront": {
+    "data": {
+      "estimatedUsage": [
+        { "measurement": "CPU_USAGE", "estimatedValue": 12.5 },
+        { "measurement": "MEMORY_USAGE_GB", "estimatedValue": 3.25 },
+        { "measurement": "NETWORK_TX_GB", "estimatedValue": 0.8 },
+        { "measurement": "DISK_USAGE_GB", "estimatedValue": 1 }
+      ]
+    }
+  },
+  "usageDocs": {
+    "data": {
+      "estimatedUsage": [{ "measurement": "CPU_USAGE", "estimatedValue": 0.5 }]
+    }
+  }
+}
