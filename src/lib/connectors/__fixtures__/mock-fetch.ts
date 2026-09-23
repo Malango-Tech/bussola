@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 
 /**
  * A stand-in for `fetch` that answers from recorded provider responses.
@@ -111,6 +111,35 @@ export function mockFetch(routes: MockRoute[]): FetchMock {
     unmatched,
     callsTo: (fragment) => calls.filter((call) => call.url.includes(fragment)),
   };
+}
+
+/**
+ * Per-test setup every connector suite shares, registered from module scope.
+ *
+ * Freezes `Date` only — fixtures carry fixed timestamps and connectors
+ * compute trailing windows from now — while leaving real timers running, so
+ * `fetchJson`'s timeout signal behaves as it does in production. Warn-level
+ * connector logs are captured on a silenced `console.warn`, where a test can
+ * assert them.
+ */
+export function setupConnectorTest(now: string): void {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date(now) });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+}
+
+/** Scope-prefixed lines the connector logger wrote at warn level. */
+export function warnings(): string[] {
+  return vi
+    .mocked(console.warn)
+    .mock.calls.map((args) => String(args[0]));
 }
 
 /** A GraphQL route keyed on the query text, for Railway's single endpoint. */

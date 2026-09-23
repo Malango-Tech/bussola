@@ -1,18 +1,18 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import fixtures from "./__fixtures__/railway.json";
 import {
   fail,
   graphql,
   mockFetch,
   ok,
+  setupConnectorTest,
   variablesOf,
+  warnings,
   type MockRequest,
   type MockRoute,
 } from "./__fixtures__/mock-fetch";
 import { toUserFacingError } from "./errors";
 import { fetchRailwayDashboard, railwayConnector } from "./railway";
-
-const NOW = new Date("2026-09-20T12:00:00.000Z");
 
 const storefront = fixtures.projects.data.projects.edges[0].node;
 
@@ -83,16 +83,7 @@ function accountRoutes(overrides: Overrides = {}): MockRoute[] {
   );
 }
 
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ["Date"], now: NOW });
-  vi.spyOn(console, "warn").mockImplementation(() => {});
-});
-
-afterEach(() => {
-  vi.useRealTimers();
-  vi.unstubAllGlobals();
-  vi.restoreAllMocks();
-});
+setupConnectorTest("2026-09-20T12:00:00.000Z");
 
 describe("fetchRailwayDashboard — account token", () => {
   it("builds services, deploy health and fleet from the project list", async () => {
@@ -263,6 +254,14 @@ describe("fetchRailwayDashboard — account token", () => {
     });
   });
 
+  it("is what the connector's fetchDashboard returns", async () => {
+    mockFetch(accountRoutes());
+    const viaConnector = await railwayConnector.fetchDashboard({
+      apiKey: "acct-token",
+    });
+    expect(viaConnector.items.map((i) => i.id)).toEqual(["svc_api", "svc_worker"]);
+  });
+
   it("renders an empty account without inventing anything", async () => {
     mockFetch(
       accountRoutes({
@@ -389,8 +388,11 @@ describe("fetchRailwayDashboard — fallback logging", () => {
     mockFetch(accountRoutes({ metricsSeries: fail(502, "Bad Gateway") }));
     await fetchRailwayDashboard("acct-token");
 
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(warnings()).toEqual([
       '[connector:railway] metric series unavailable {"environmentId":"env_prod"}',
+    ]);
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.any(String),
       expect.objectContaining({ message: "Railway API 502: Bad Gateway" }),
     );
   });

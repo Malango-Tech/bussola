@@ -1,0 +1,108 @@
+{
+  "projects": {
+    "projects": [
+      {
+        "id": "prj_web8Qm2",
+        "name": "web",
+        "accountId": "team_acme",
+        "framework": "nextjs",
+        "createdAt": 1735689600000,
+        "updatedAt": 1789902000000
+      },
+      {
+        "id": "prj_docsL4k",
+        "name": "docs",
+        "accountId": "team_acme",
+        "framework": "astro",
+        "updatedAt": 1789905000000
+      },
+      {
+        "id": "prj_sbx91Z",
+        "name": "sandbox",
+        "accountId": "team_acme",
+        "framework": null,
+        "updatedAt": 1780000000000
+      }
+    ],
+    "pagination": { "count": 3, "next": null, "prev": null }
+  },
+  "deployments": {
+    "deployments": [
+      {
+        "uid": "dpl_7xK2docsBuilding",
+        "name": "docs",
+        "url": "docs-git-main-acme.vercel.app",
+        "created": 1789905000000,
+        "createdAt": 1789905000000,
+        "state": "BUILDING",
+        "readyState": "BUILDING",
+        "type": "LAMBDAS",
+        "target": "production",
+        "creator": { "uid": "usr_1", "username": "ada" },
+        "meta": {
+          "gitlabCommitMessage": "Document the refund flow",
+          "gitlabCommitRef": "main",
+          "gitlabCommitSha": "9f8e7d6c5b4a"
+        }
+      },
+      {
+        "uid": "dpl_6wJ1webReady",
+        "name": "web",
+        "url": "web-3kd8s-acme.vercel.app",
+        "created": 1789902000000,
+        "createdAt": 1789902000000,
+        "state": "READY",
+        "readyState": "READY",
+        "type": "LAMBDAS",
+        "target": "production",
+        "creator": { "uid": "usr_2", "username": "grace" },
+        "meta": {
+          "githubCommitMessage": "Fix checkout rounding",
+          "githubCommitRef": "main",
+          "githubCommitSha": "a1b2c3d4e5f6",
+          "githubOrg": "acme",
+          "githubRepo": "web"
+        }
+      },
+      {
+        "uid": "dpl_5vH0webError",
+        "name": "web",
+        "url": "web-2jd7r-acme.vercel.app",
+        "created": 1789898400000,
+        "state": "ERROR",
+        "readyState": "ERROR",
+        "type": "LAMBDAS",
+        "target": null,
+        "meta": {
+          "githubCommitMessage": "Try the new bundler",
+          "githubCommitRef": "feat/bundler"
+        }
+      },
+      {
+        "uid": "dpl_4uG9orphan",
+        "name": "old-landing",
+        "url": "old-landing-acme.vercel.app",
+        "createdAt": 1789812000000,
+        "readyState": "CANCELED",
+        "type": "LAMBDAS",
+        "target": "production",
+        "meta": {}
+      }
+    ],
+    "pagination": { "count": 4, "next": null, "prev": null }
+  },
+  "forbidden": {
+    "error": {
+      "code": "forbidden",
+      "message": "You don't have permission to access this resource.",
+      "invalidToken": false
+    }
+  },
+  "invalidToken": {
+    "error": {
+      "code": "forbidden",
+      "message": "The request is missing an authentication token",
+      "missingToken": true
+    }
+  }
+}
