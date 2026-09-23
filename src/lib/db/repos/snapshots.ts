@@ -105,7 +105,10 @@ export function snapshotRepo(org: string) {
       return row ? hydrate(row) : null;
     },
 
-    /** Every connection's snapshot, for cross-source widgets. */
+    /**
+     * Every connection's snapshot, for cross-source widgets. Complete for the
+     * same reason `connections.list` is.
+     */
     async listAll() {
       const { query } = await base();
       const rows = await query

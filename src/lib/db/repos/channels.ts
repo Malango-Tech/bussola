@@ -14,6 +14,11 @@ export function channelsRepo(ctx: TenantContext) {
     );
 
   return {
+    /**
+     * Deliberately complete: the alert rule routes check ownership of a
+     * rule's channels against this list, so a bound would start rejecting
+     * real channels. Channels are a handful of destinations per organization.
+     */
     async list() {
       const db = await getDb();
       return db

@@ -4,6 +4,15 @@ import { getDb } from "..";
 import { alertRules, connections, type AlertComparator } from "../schema";
 import type { TenantContext } from "./context";
 
+/**
+ * Upper bound on the rules management list.
+ *
+ * No plan caps how many rules an organization keeps, so unlike dashboards the
+ * list has nothing else stopping it growing. Several hundred rules is already
+ * past what the screen can usefully show; newest are kept.
+ */
+const MAX_RULES_LISTED = 500;
+
 export function alertRulesRepo(ctx: TenantContext) {
   const org = ctx.organizationId;
 
@@ -36,7 +45,8 @@ export function alertRulesRepo(ctx: TenantContext) {
         .from(alertRules)
         .innerJoin(connections, eq(alertRules.connectionId, connections.id))
         .where(eq(alertRules.organizationId, org))
-        .orderBy(desc(alertRules.createdAt));
+        .orderBy(desc(alertRules.createdAt))
+        .limit(MAX_RULES_LISTED);
     },
 
     async count() {

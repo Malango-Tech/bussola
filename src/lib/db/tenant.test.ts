@@ -146,6 +146,166 @@ describe("widget isolation", () => {
   });
 });
 
+describe("saveLayouts", () => {
+  async function canvas(count: number) {
+    const dash = await alice.dashboards.create(`Canvas ${count}`);
+    const widgets = [];
+    for (let i = 0; i < count; i++) {
+      widgets.push(
+        await alice.widgets.add({
+          dashboardId: dash.id,
+          widgetType: "railway-fleet",
+          title: `W${i}`,
+          configJson: "{}",
+          layoutY: i * 2,
+          layoutW: 3,
+          layoutH: 2,
+        }),
+      );
+    }
+    return { dash, widgets };
+  }
+
+  const positions = async (dashboardId: string) =>
+    Object.fromEntries(
+      (await alice.widgets.listFor(dashboardId)).map((w) => [
+        w.id,
+        [w.layoutX, w.layoutY, w.layoutW, w.layoutH],
+      ]),
+    );
+
+  it("persists every layout in one call and counts them", async () => {
+    const { dash, widgets } = await canvas(3);
+    const moved = await alice.widgets.saveLayouts(
+      dash.id,
+      widgets.map((w, n) => ({ i: w.id, x: n, y: 10 - n, w: 4, h: 1 + n })),
+    );
+
+    expect(moved).toBe(3);
+    expect(await positions(dash.id)).toEqual({
+      [widgets[0].id]: [0, 10, 4, 1],
+      [widgets[1].id]: [1, 9, 4, 2],
+      [widgets[2].id]: [2, 8, 4, 3],
+    });
+  });
+
+  it("applies all or nothing: one bad value leaves the canvas untouched", async () => {
+    const { dash, widgets } = await canvas(3);
+    const before = await positions(dash.id);
+
+    await expect(
+      alice.widgets.saveLayouts(dash.id, [
+        { i: widgets[0].id, x: 5, y: 5, w: 5, h: 5 },
+        { i: widgets[1].id, x: 6, y: 6, w: 6, h: 6 },
+        // Not an integer: Postgres rejects the statement.
+        { i: widgets[2].id, x: 1.5, y: 7, w: 7, h: 7 },
+      ]),
+    ).rejects.toThrow();
+
+    expect(await positions(dash.id)).toEqual(before);
+  });
+
+  it("moves only the widgets on this dashboard, in the same batch", async () => {
+    const { dash, widgets } = await canvas(1);
+    const other = await canvas(1);
+
+    const moved = await alice.widgets.saveLayouts(dash.id, [
+      { i: widgets[0].id, x: 3, y: 3, w: 3, h: 3 },
+      { i: other.widgets[0].id, x: 9, y: 9, w: 1, h: 1 },
+      { i: "wdg_missing", x: 1, y: 1, w: 1, h: 1 },
+    ]);
+
+    expect(moved).toBe(1);
+    expect((await positions(other.dash.id))[other.widgets[0].id]).toEqual([
+      0, 0, 3, 2,
+    ]);
+  });
+
+  it("keeps the last position when an id repeats", async () => {
+    const { dash, widgets } = await canvas(1);
+    await alice.widgets.saveLayouts(dash.id, [
+      { i: widgets[0].id, x: 1, y: 1, w: 1, h: 1 },
+      { i: widgets[0].id, x: 2, y: 2, w: 2, h: 2 },
+    ]);
+    expect((await positions(dash.id))[widgets[0].id]).toEqual([2, 2, 2, 2]);
+  });
+
+  it("does nothing for an empty layout", async () => {
+    const { dash } = await canvas(1);
+    expect(await alice.widgets.saveLayouts(dash.id, [])).toBe(0);
+  });
+
+  it("never moves another tenant's widget", async () => {
+    const { dash, widgets } = await canvas(1);
+    const moved = await bob.widgets.saveLayouts(dash.id, [
+      { i: widgets[0].id, x: 9, y: 9, w: 1, h: 1 },
+    ]);
+    expect(moved).toBe(0);
+    expect((await positions(dash.id))[widgets[0].id]).toEqual([0, 0, 3, 2]);
+  });
+});
+
+describe("nextY", () => {
+  it("is the first free row below every widget", async () => {
+    const dash = await alice.dashboards.create("Stacked");
+    expect(await alice.widgets.nextY(dash.id)).toBe(0);
+
+    for (const [layoutY, layoutH] of [
+      [0, 2],
+      [4, 3],
+      [1, 1],
+    ]) {
+      await alice.widgets.add({
+        dashboardId: dash.id,
+        widgetType: "railway-fleet",
+        title: "W",
+        configJson: "{}",
+        layoutY,
+        layoutW: 3,
+        layoutH,
+      });
+    }
+    expect(await alice.widgets.nextY(dash.id)).toBe(7);
+    // Scoped like every other read.
+    expect(await bob.widgets.nextY(dash.id)).toBe(0);
+  });
+});
+
+describe("bounded lists", () => {
+  it("never lets revoked tokens push a live one out of the list", async () => {
+    const { MAX_TOKENS_LISTED } = await import("./repos/api-tokens");
+    const token = (name: string) =>
+      alice.apiTokens.create({
+        name,
+        tokenHash: createId("hash"),
+        tokenPrefix: "bus_",
+        scope: "read",
+        expiresAt: null,
+      });
+
+    const live = await token("oldest, still live");
+    for (let i = 0; i < MAX_TOKENS_LISTED; i++) {
+      const dead = await token(`revoked ${i}`);
+      await alice.apiTokens.revoke(dead.id);
+    }
+
+    const listed = await alice.apiTokens.list();
+    expect(listed).toHaveLength(MAX_TOKENS_LISTED);
+    expect(listed.map((t) => t.id)).toContain(live.id);
+    // Still newest first, as the settings screen expects.
+    const times = listed.map((t) => t.createdAt.getTime());
+    expect(times).toEqual([...times].sort((a, b) => b - a));
+    expect(listed.at(-1)?.id).toBe(live.id);
+  });
+
+  it("clamps the alert feed to its maximum, whatever is asked for", async () => {
+    // Nothing to return for this tenant; the point is that an absurd limit
+    // is accepted and bounded rather than passed through.
+    await expect(bob.alertEvents.list(1_000_000)).resolves.toEqual([]);
+    await expect(bob.alertEvents.list(0)).resolves.toEqual([]);
+  });
+});
+
 describe("connection isolation", () => {
   it("byProvider never returns another tenant's credentials", async () => {
     await alice.connections.create({

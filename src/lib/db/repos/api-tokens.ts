@@ -1,17 +1,27 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { createId } from "@/lib/id";
 import { getDb } from "..";
 import { apiTokens, type ApiTokenScope } from "../schema";
 import type { TenantContext } from "./context";
 
+/** Tokens listed per organization; see `list`. */
+export const MAX_TOKENS_LISTED = 100;
+
 export function apiTokensRepo(ctx: TenantContext) {
   const org = ctx.organizationId;
 
   return {
-    /** Never returns the hash: nothing in the UI has a use for it. */
+    /**
+     * Never returns the hash: nothing in the UI has a use for it.
+     *
+     * Bounded like share links, and for the same reason: revoking keeps the
+     * row, so the list only grows. Live tokens are chosen first so one that
+     * still works can never be pushed out of sight by revoked ones, then the
+     * page is returned newest first as before.
+     */
     async list() {
       const db = await getDb();
-      return db
+      const rows = await db
         .select({
           id: apiTokens.id,
           name: apiTokens.name,
@@ -24,7 +34,9 @@ export function apiTokensRepo(ctx: TenantContext) {
         })
         .from(apiTokens)
         .where(eq(apiTokens.organizationId, org))
-        .orderBy(desc(apiTokens.createdAt));
+        .orderBy(sql`${apiTokens.revokedAt} is null desc`, desc(apiTokens.createdAt))
+        .limit(MAX_TOKENS_LISTED);
+      return rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     },
 
     async create(input: {

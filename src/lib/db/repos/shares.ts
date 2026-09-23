@@ -1,16 +1,28 @@
-import { and, count, desc, eq, isNull } from "drizzle-orm";
+import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
 import { createId } from "@/lib/id";
 import { getDb } from "..";
 import { dashboardShares } from "../schema";
 import type { TenantContext } from "./context";
 
+/** Links listed per dashboard; see `listFor`. */
+export const MAX_SHARES_LISTED = 100;
+
 export function sharesRepo(ctx: TenantContext) {
   const org = ctx.organizationId;
 
   return {
+    /**
+     * A dashboard's links, newest first.
+     *
+     * Bounded, because revoked links are kept (see `revoke`) and so the list
+     * only ever grows. Live links are chosen ahead of revoked ones before the
+     * bound applies — an old link still in circulation must never fall off the
+     * list its owner would revoke it from — and the page is then put back in
+     * creation order.
+     */
     async listFor(dashboardId: string) {
       const db = await getDb();
-      return db
+      const rows = await db
         .select()
         .from(dashboardShares)
         .where(
@@ -19,7 +31,12 @@ export function sharesRepo(ctx: TenantContext) {
             eq(dashboardShares.organizationId, org),
           ),
         )
-        .orderBy(desc(dashboardShares.createdAt));
+        .orderBy(
+          sql`${dashboardShares.revokedAt} is null desc`,
+          desc(dashboardShares.createdAt),
+        )
+        .limit(MAX_SHARES_LISTED);
+      return rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     },
 
     /** Live links across every dashboard, for the count in settings. */

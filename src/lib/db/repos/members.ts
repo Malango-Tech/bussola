@@ -3,11 +3,24 @@ import { getDb } from "..";
 import { apiTokens, invitation, member, session, user } from "../schema";
 import type { TenantContext } from "./context";
 
+/**
+ * Upper bound on the pending-invitation list.
+ *
+ * An invitation that expires unanswered stays `pending` — nothing moves it on
+ * — so the list grows with every ignored invite. Members themselves are not
+ * bounded here: seats are what the plan sells, and every seat must be listed
+ * for an owner to be able to manage it.
+ */
+const MAX_INVITATIONS_LISTED = 100;
+
 export function membersRepo(ctx: TenantContext) {
   const org = ctx.organizationId;
 
   return {
-    /** The people in this organization, with the account behind each seat. */
+    /**
+     * The people in this organization, with the account behind each seat.
+     * Complete: bounded by the seats the plan sells (see the note above).
+     */
     async list() {
       const db = await getDb();
       return db
@@ -44,7 +57,8 @@ export function membersRepo(ctx: TenantContext) {
             eq(invitation.status, "pending"),
           ),
         )
-        .orderBy(desc(invitation.createdAt));
+        .orderBy(desc(invitation.createdAt))
+        .limit(MAX_INVITATIONS_LISTED);
     },
 
     /**

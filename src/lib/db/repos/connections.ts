@@ -11,6 +11,13 @@ export function connectionsRepo(ctx: TenantContext) {
     and(eq(connections.id, id), eq(connections.organizationId, org));
 
   return {
+    /**
+     * Deliberately complete. Callers fan out over every connection — the
+     * connections page, a cross-source widget's connection ids — and a
+     * truncated list would read as a source quietly disconnecting. Each row
+     * is also a provider account synced on a schedule, so the table cannot
+     * grow without its owner noticing the work.
+     */
     async list() {
       const db = await getDb();
       return db
