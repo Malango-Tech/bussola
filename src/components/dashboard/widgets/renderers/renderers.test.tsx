@@ -106,12 +106,7 @@ describe("renderer registry", () => {
  * Each is a fixture bug, not a renderer one, pinned here so it stays visible:
  * once the fixture is fixed this expectation fails and the entry goes.
  */
-const KNOWN_EMPTY_ON_DEMO: Partial<Record<WidgetType, string>> = {
-  // The Netlify fixture keys `trackers` by site name ("landing"); the
-  // connector, and so the widget, key them by site id ("n1"). Fix belongs in
-  // src/lib/demo/fixtures.ts.
-  "netlify-tracker": "No deployment history yet.",
-};
+const KNOWN_EMPTY_ON_DEMO: Partial<Record<WidgetType, string>> = {};
 
 describe("every widget type on its demo payload", () => {
   it.each(ALL_TYPES)("%s renders real content", async (type) => {

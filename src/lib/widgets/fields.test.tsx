@@ -52,23 +52,6 @@ afterAll(() => {
 
 const ALL_TYPES = WIDGET_REGISTRY.map((def) => def.type);
 
-/**
- * Fixture repairs, so each widget is exercised on its populated path.
- *
- * The Netlify demo keys `trackers` by site name where the connector keys them
- * by site id, which leaves the tracker widget empty — and an empty widget
- * reads nothing, so it could not show whether `trackers` belongs on its list.
- */
-function populated(type: WidgetType, payload: WirePayload): WirePayload {
-  if (type !== "netlify-tracker") return payload;
-  const items = payload.items as Array<{ id: string; name: string }>;
-  const byName = payload.trackers as Record<string, unknown>;
-  return {
-    ...payload,
-    trackers: Object.fromEntries(items.map((item) => [item.id, byName[item.name]])),
-  };
-}
-
 async function markup(type: WidgetType, payload: WirePayload): Promise<string> {
   const { container, unmount } = await renderWidget(type, payload, store.served);
   const html = normalizeIds(container.innerHTML);
@@ -78,7 +61,7 @@ async function markup(type: WidgetType, payload: WirePayload): Promise<string> {
 
 describe("WIDGET_FIELDS", () => {
   it.each(ALL_TYPES)("%s renders the same from its share projection", async (type) => {
-    const full = populated(type, servedDemo(type));
+    const full = servedDemo(type);
     const projected = projectPayload([type], full);
 
     expect(await markup(type, projected)).toBe(await markup(type, full));
@@ -104,7 +87,7 @@ describe("WIDGET_FIELDS", () => {
   };
 
   it.each(ALL_TYPES)("%s reads every field it lists", async (type) => {
-    const full = populated(type, servedDemo(type));
+    const full = servedDemo(type);
     const baseline = await markup(type, projectPayload([type], full));
 
     for (const field of WIDGET_FIELDS[type]) {

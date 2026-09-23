@@ -25,9 +25,7 @@ import type {
  * pins each entry's `provider` to its key, so a connector registered under the
  * wrong name does not compile.
  */
-export const CONNECTORS: {
-  readonly [P in SyncableProvider]: Connector<unknown, P>;
-} = {
+export const CONNECTORS = {
   railway: railwayConnector,
   netlify: netlifyConnector,
   supabase: supabaseConnector,
@@ -37,7 +35,9 @@ export const CONNECTORS: {
   sentry: sentryConnector,
   resend: resendConnector,
   vercel: vercelConnector,
-};
+  // `satisfies` rather than an annotation, so each entry keeps its concrete
+  // dashboard type: the sync worker checks those against what widgets read.
+} as const satisfies { readonly [P in SyncableProvider]: Connector<unknown, P> };
 
 /** Wave 1: everything that authenticates with a pasted key or token. */
 export const LIVE_PROVIDERS: Provider[] = [

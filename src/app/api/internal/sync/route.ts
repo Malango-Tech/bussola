@@ -1,5 +1,6 @@
 import { jsonError, jsonOk } from "@/lib/api";
 import { drainDeliveries } from "@/lib/alerts/outbox";
+import { env } from "@/lib/env";
 import { hashToken, tokensMatch } from "@/lib/sharing/tokens";
 import { runDueSyncs } from "@/lib/sync/runner";
 
@@ -16,7 +17,7 @@ export const dynamic = "force-dynamic";
  * one would let anyone force provider traffic on every tenant at once.
  */
 function authorized(request: Request): boolean {
-  const expected = process.env.BUSSOLA_SYNC_SECRET;
+  const expected = env().BUSSOLA_SYNC_SECRET;
   if (!expected) return false;
 
   const header =
