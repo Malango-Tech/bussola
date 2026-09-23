@@ -1,7 +1,11 @@
 /**
  * Next runs this once per server process.
  *
- * Two jobs, both self-hosted only.
+ * First, in both editions, it validates the environment: a malformed or
+ * missing variable should stop the server at boot with a message naming it,
+ * not surface as a 500 on whichever request first happens to read it.
+ *
+ * Then two jobs, both self-hosted only.
  *
  * Migrations: a single-server install should just work after `npm run dev`.
  * Making someone run a migration command first — and getting "relation does
@@ -18,6 +22,17 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
+  const { logger } = await import("./lib/log");
+  const log = logger("bussola");
+
+  const { env } = await import("./lib/env");
+  try {
+    env();
+  } catch (error) {
+    log.error("refusing to start: invalid configuration", {}, error);
+    throw error;
+  }
+
   const { isSelfHosted } = await import("./lib/edition");
   if (!isSelfHosted) return;
 
@@ -25,8 +40,9 @@ export async function register() {
     const { runMigrations } = await import("./lib/db");
     await runMigrations();
   } catch (error) {
-    console.error(
-      "[bussola] migrations failed — the app will not work until this is fixed:",
+    log.error(
+      "migrations failed — the app will not work until this is fixed",
+      {},
       error,
     );
     return;
@@ -38,10 +54,10 @@ export async function register() {
   } catch (error) {
     // Legacy rows still decrypt, so a failed rotation is worth a log line,
     // not a server that refuses to start.
-    console.error("[bussola] re-encrypting stored secrets failed:", error);
+    log.error("re-encrypting stored secrets failed", {}, error);
   }
 
-  if (process.env.BUSSOLA_DISABLE_INLINE_SYNC === "1") return;
+  if (env().BUSSOLA_DISABLE_INLINE_SYNC) return;
 
   const { startScheduler } = await import("./lib/sync/scheduler");
   startScheduler();

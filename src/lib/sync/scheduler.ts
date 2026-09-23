@@ -1,5 +1,5 @@
 import { drainDeliveries } from "@/lib/alerts/outbox";
-import { TICK_INTERVAL_SECONDS } from "./config";
+import { tickIntervalSeconds } from "./config";
 import { pruneHistory } from "./retention";
 import { runDueSyncs } from "./runner";
 
@@ -19,7 +19,7 @@ export type Scheduler = { stop: () => void };
 let running: Scheduler | null = null;
 
 export function startScheduler(
-  { intervalSeconds = TICK_INTERVAL_SECONDS, onReport = defaultReport } = {} as {
+  { intervalSeconds = tickIntervalSeconds(), onReport = defaultReport } = {} as {
     intervalSeconds?: number;
     onReport?: (report: Awaited<ReturnType<typeof runDueSyncs>>) => void;
   },

@@ -9,8 +9,12 @@ import { organization } from "better-auth/plugins/organization";
 import { and, count, eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { isCloud, isSelfHosted } from "@/lib/edition";
+import { dataDir as configuredDataDir, env } from "@/lib/env";
 import { createId } from "@/lib/id";
+import { logger } from "@/lib/log";
 import { emailConfigured } from "@/lib/notify/email";
+
+const log = logger("auth");
 
 /**
  * Identity, in one place, for both editions.
@@ -33,7 +37,7 @@ let authPromise: Promise<Auth> | undefined;
  * alive across restarts.
  */
 function secret(): string {
-  const configured = process.env.BETTER_AUTH_SECRET;
+  const configured = env().BETTER_AUTH_SECRET;
   if (configured) return configured;
 
   if (isCloud) {
@@ -42,22 +46,26 @@ function secret(): string {
     );
   }
 
-  const dataDir =
-    process.env.BUSSOLA_DATA_DIR || path.join(process.cwd(), "data");
+  const dataDir = configuredDataDir();
   const secretFile = path.join(dataDir, "auth-secret");
 
   try {
     const existing = fs.readFileSync(secretFile, "utf8").trim();
     if (existing.length >= 32) return existing;
-  } catch {
-    // Not created yet — fall through and write one.
+  } catch (error) {
+    // Not created yet — fall through and write one. Anything other than a
+    // missing file (a permissions problem, say) is worth knowing about,
+    // because the write below is about to fail the same way.
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      log.warn("could not read the session secret", { file: secretFile }, error);
+    }
   }
 
   const generated = randomBytes(32).toString("base64url");
   fs.mkdirSync(dataDir, { recursive: true });
   // Owner-only: this key is equivalent to every session on the instance.
   fs.writeFileSync(secretFile, generated, { mode: 0o600 });
-  console.log(`[bussola] generated a session secret at ${secretFile}`);
+  log.info("generated a session secret", { file: secretFile });
 
   return generated;
 }
@@ -72,9 +80,10 @@ function secret(): string {
  * beats a crash inside the invite flow.
  */
 function inviteBaseUrl(): string {
+  const { BETTER_AUTH_URL, BUSSOLA_PUBLIC_URL } = env();
   return (
-    process.env.BETTER_AUTH_URL ||
-    process.env.BUSSOLA_PUBLIC_URL ||
+    BETTER_AUTH_URL ??
+    BUSSOLA_PUBLIC_URL ??
     "http://localhost:3000"
   ).replace(/\/+$/, "");
 }
@@ -105,7 +114,7 @@ async function build() {
      * infers the origin from the request, which is what self-hosting needs.
      * Cloud sets BETTER_AUTH_URL, so it stays explicit where it matters.
      */
-    baseURL: process.env.BETTER_AUTH_URL || undefined,
+    baseURL: env().BETTER_AUTH_URL,
     database: drizzleAdapter(db, { provider: "pg", schema }),
 
     emailAndPassword: {
@@ -147,7 +156,9 @@ async function build() {
               ].join("\n"),
             });
             if (!result.ok) {
-              console.warn(`[auth] verification email not sent: ${result.error}`);
+              // The address stays out of the log: the reason is what an
+              // operator can act on, and it is not worth a copy of PII.
+              log.warn("verification email not sent", { reason: result.error });
             }
           },
         }
@@ -254,7 +265,10 @@ async function build() {
           });
 
           if (!result.ok) {
-            console.warn(`[auth] invitation email not sent: ${result.error}`);
+            log.warn("invitation email not sent", {
+              invitationId: data.id,
+              reason: result.error,
+            });
           }
         },
 

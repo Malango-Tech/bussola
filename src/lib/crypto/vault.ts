@@ -7,6 +7,10 @@ import {
   randomBytes,
   scryptSync,
 } from "crypto";
+import { dataDir, env } from "@/lib/env";
+import { logger } from "@/lib/log";
+
+const log = logger("vault");
 
 const ALGO = "aes-256-gcm";
 const IV_BYTES = 12;
@@ -46,7 +50,7 @@ let cached: { fingerprint: string; ring: KeyRing } | undefined;
  *   now only a legacy key, and startup re-encrypts rows away from it.
  */
 function keyRing(): KeyRing {
-  const raw = process.env.BUSSOLA_ENCRYPTION_KEY;
+  const raw = env().BUSSOLA_ENCRYPTION_KEY;
   const fingerprint = `${raw ?? ""}\u0000${dataDir()}`;
   if (cached?.fingerprint === fingerprint) return cached.ring;
 
@@ -69,18 +73,19 @@ function keyRing(): KeyRing {
   return ring;
 }
 
-function dataDir(): string {
-  return process.env.BUSSOLA_DATA_DIR || path.join(process.cwd(), "data");
-}
-
 function generatedKey(): Buffer {
   const keyFile = path.join(dataDir(), "encryption-key");
 
   try {
     const existing = fs.readFileSync(keyFile, "utf8").trim();
     if (/^[0-9a-f]{64}$/.test(existing)) return Buffer.from(existing, "hex");
-  } catch {
-    // Not created yet — fall through and write one.
+  } catch (error) {
+    // Not created yet — fall through and write one. Any other failure to
+    // read it is worth a line: the exclusive write below will then refuse to
+    // replace the file, and this is the context for that error.
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      log.warn("could not read the encryption key file", { file: keyFile }, error);
+    }
   }
 
   const generated = randomBytes(32);
@@ -91,7 +96,7 @@ function generatedKey(): Buffer {
     mode: 0o600,
     flag: "wx",
   });
-  console.log(`[bussola] generated an encryption key at ${keyFile}`);
+  log.info("generated an encryption key", { file: keyFile });
   return generated;
 }
 
@@ -169,7 +174,7 @@ export function decryptSecret(payload: string): string {
 }
 
 export function encryptionConfigured(): boolean {
-  return Boolean(process.env.BUSSOLA_ENCRYPTION_KEY);
+  return Boolean(env().BUSSOLA_ENCRYPTION_KEY);
 }
 
 /** Exposed for tests, which switch keys between cases. */

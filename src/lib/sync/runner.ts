@@ -7,7 +7,7 @@ import { toUserFacingError } from "@/lib/connectors/errors";
 import { createId } from "@/lib/id";
 import type { Provider } from "@/lib/providers";
 import {
-  BATCH_SIZE,
+  batchSize,
   CLAIM_LEASE_SECONDS,
   DASHBOARD_KIND,
   MAX_CONSECUTIVE_FAILURES,
@@ -235,7 +235,7 @@ export async function syncConnection(connection: {
  * Connections are synced concurrently but the batch is bounded, so a tenant
  * with many connections cannot starve the queue or open unbounded sockets.
  */
-export async function runDueSyncs(limit = BATCH_SIZE): Promise<SyncReport> {
+export async function runDueSyncs(limit = batchSize()): Promise<SyncReport> {
   const claimed = await claimDue(limit);
   const outcomes = await Promise.all(claimed.map(syncConnection));
 

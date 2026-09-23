@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import type { Provider } from "@/lib/providers";
 
 /** The only snapshot each connection currently produces. */
@@ -98,13 +99,20 @@ export const MAX_CONSECUTIVE_FAILURES = 10;
  */
 export const CLAIM_LEASE_SECONDS = 5 * 60;
 
-/** Connections claimed per tick. */
-export const BATCH_SIZE = Number(process.env.BUSSOLA_SYNC_BATCH || 25);
+/**
+ * Connections claimed per tick (`BUSSOLA_SYNC_BATCH`).
+ *
+ * Functions rather than constants so the value is read when a tick runs, not
+ * frozen at whatever the environment was when this module first loaded.
+ */
+export function batchSize(): number {
+  return env().BUSSOLA_SYNC_BATCH;
+}
 
-/** How often the scheduler looks for due connections. */
-export const TICK_INTERVAL_SECONDS = Number(
-  process.env.BUSSOLA_SYNC_TICK_SECONDS || 15,
-);
+/** How often the scheduler looks for due connections (`BUSSOLA_SYNC_TICK_SECONDS`). */
+export function tickIntervalSeconds(): number {
+  return env().BUSSOLA_SYNC_TICK_SECONDS;
+}
 
 /**
  * Delay before the next run of a connection.

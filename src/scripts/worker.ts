@@ -1,6 +1,6 @@
 import { closeDb, databaseUrl } from "../lib/db";
 import { EDITION } from "../lib/edition";
-import { TICK_INTERVAL_SECONDS } from "../lib/sync/config";
+import { tickIntervalSeconds } from "../lib/sync/config";
 import { startScheduler } from "../lib/sync/scheduler";
 
 /**
@@ -27,7 +27,7 @@ if (!databaseUrl()) {
 }
 
 console.log(
-  `Bussola sync worker · edition=${EDITION} · tick=${TICK_INTERVAL_SECONDS}s`,
+  `Bussola sync worker · edition=${EDITION} · tick=${tickIntervalSeconds()}s`,
 );
 
 const scheduler = startScheduler();

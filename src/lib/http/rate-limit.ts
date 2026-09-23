@@ -1,3 +1,5 @@
+import { env } from "@/lib/env";
+
 /**
  * A sliding-window rate limiter for the endpoints that answer without a
  * session: share links and the MCP server.
@@ -157,10 +159,7 @@ export function callerAddress(request: Request): string {
      * BUSSOLA_TRUSTED_PROXY_HOPS is how many proxies sit in front of the app
      * (default 1: one load balancer or platform router).
      */
-    const hops = Math.max(
-      1,
-      Number.parseInt(process.env.BUSSOLA_TRUSTED_PROXY_HOPS ?? "", 10) || 1,
-    );
+    const hops = env().BUSSOLA_TRUSTED_PROXY_HOPS;
     const chain = forwarded
       .split(",")
       .map((entry) => entry.trim())

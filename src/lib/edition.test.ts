@@ -56,7 +56,8 @@ describe("cloud", () => {
   it.each(CLOUD_REQUIRED)("refuses to start without %s", async (missing) => {
     const env: Record<string, string> = { BUSSOLA_EDITION: "cloud" };
     for (const key of CLOUD_REQUIRED) {
-      if (key !== missing) env[key] = "set";
+      // Valid values, so the only thing wrong is the one that is missing.
+      if (key !== missing) env[key] = key === "BETTER_AUTH_URL" ? "https://app.example" : "set";
     }
     const { assertEditionConfig } = await loadEdition(env);
     expect(() => assertEditionConfig()).toThrow(missing);
@@ -72,5 +73,14 @@ describe("cloud", () => {
     });
     expect(isCloud).toBe(true);
     expect(() => assertEditionConfig()).not.toThrow();
+  });
+});
+
+describe("either edition", () => {
+  it("refuses a value that is set but malformed", async () => {
+    const { assertEditionConfig } = await loadEdition({
+      DATABASE_POOL_MAX: "plenty",
+    });
+    expect(() => assertEditionConfig()).toThrow(/DATABASE_POOL_MAX/);
   });
 });

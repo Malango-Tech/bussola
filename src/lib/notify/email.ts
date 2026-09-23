@@ -1,3 +1,5 @@
+import { env } from "@/lib/env";
+
 /**
  * Sending email, for alerts and invitations.
  *
@@ -39,13 +41,14 @@ export type EmailConfig = {
  * configuration.
  */
 export function emailConfig(): EmailConfig | null {
-  const from = process.env.BUSSOLA_EMAIL_FROM;
+  const {
+    BUSSOLA_EMAIL_FROM: from,
+    BUSSOLA_RESEND_API_KEY: resend,
+    BUSSOLA_POSTMARK_TOKEN: postmark,
+  } = env();
   if (!from) return null;
 
-  const resend = process.env.BUSSOLA_RESEND_API_KEY;
   if (resend) return { provider: "resend", apiKey: resend, from };
-
-  const postmark = process.env.BUSSOLA_POSTMARK_TOKEN;
   if (postmark) return { provider: "postmark", apiKey: postmark, from };
 
   return null;

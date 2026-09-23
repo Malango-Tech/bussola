@@ -74,7 +74,7 @@ The same codebase runs in two modes, selected by `BUSSOLA_EDITION`.
 | Tenancy | one organization, created on first signup | one per customer |
 | Sign-in | email + password, one account | email + password, open signup |
 | Database | PGlite or your own Postgres | managed Postgres, required |
-| Secrets | fall back to local dev values | `BUSSOLA_ENCRYPTION_KEY` + `BETTER_AUTH_SECRET` required |
+| Secrets | fall back to local dev values | `DATABASE_URL`, `BUSSOLA_ENCRYPTION_KEY`, `BETTER_AUTH_SECRET` + `BETTER_AUTH_URL` required |
 | Billing | none, everything unlocked | Stripe checkout, portal, webhook |
 
 This is not two builds. Every query against tenant-owned data goes through the
@@ -82,6 +82,19 @@ organization-scoped repositories in `src/lib/db/tenant.ts`, in both editions —
 so the self-hosted path exercises the very isolation code that keeps hosted
 customers apart, and ESLint refuses to compile a route handler that reaches
 around it.
+
+## Configuration
+
+Every environment variable is listed, with its default, in `.env.example`, and
+declared with its type in `src/lib/env.ts` — the one module that reads them.
+The server validates them all at startup: a value that is set but malformed,
+or anything the cloud edition requires that is missing, stops it with a
+message naming the variable rather than failing later on some request. Empty
+values count as unset, so a copy of `.env.example` is a valid configuration.
+
+Logs are structured: one JSON object per line in production, a readable line
+in development (`BUSSOLA_LOG_FORMAT` overrides either), from `info` up unless
+`BUSSOLA_LOG_LEVEL` says otherwise.
 
 ## Auth
 
