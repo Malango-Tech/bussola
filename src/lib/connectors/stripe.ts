@@ -8,11 +8,17 @@ import type {
 } from "./types";
 import { toUserFacingError } from "./errors";
 import { fetchJson } from "./http";
+import { daysAgo } from "./shared/dates";
+import { connectorLogger, describeError } from "./shared/log";
+import { toMajor } from "./shared/money";
+import { collectPages } from "./shared/pagination";
 
 const BASE = "https://api.stripe.com/v1";
 const SUBSCRIPTION_PAGES = 5;
 const PER_PAGE = 100;
 const RECENT_PAYMENTS = 25;
+
+const log = connectorLogger("stripe");
 
 async function stripeFetch<T>(key: string, path: string): Promise<T> {
   return fetchJson<T>(
@@ -96,20 +102,11 @@ export function chargeStatus(charge: {
   }
 }
 
-/** Stripe amounts are in the currency's minor unit. */
-function toMajor(amount: number): number {
-  return amount / 100;
-}
-
 async function fetchSubscriptions(key: string): Promise<RevenueSummary> {
-  let mrr = 0;
-  let active = 0;
-  let trialing = 0;
-  let truncated = false;
-  let currency = "eur";
-  let startingAfter: string | undefined;
-
-  for (let page = 0; page < SUBSCRIPTION_PAGES; page++) {
+  const { items: subscriptions, truncated } = await collectPages<
+    StripeSubscription,
+    string
+  >(async (startingAfter) => {
     const query = new URLSearchParams({
       status: "all",
       limit: String(PER_PAGE),
@@ -121,21 +118,27 @@ async function fetchSubscriptions(key: string): Promise<RevenueSummary> {
       key,
       `/subscriptions?${query.toString()}`,
     );
+    return {
+      items: list.data,
+      // Stripe pages by object id: the next page starts after this one's last.
+      next: list.has_more ? list.data.at(-1)?.id : null,
+    };
+  }, SUBSCRIPTION_PAGES);
 
-    for (const subscription of list.data) {
-      if (subscription.currency) currency = subscription.currency;
-      if (subscription.status === "trialing") trialing++;
-      if (subscription.status !== "active") continue;
+  let mrr = 0;
+  let active = 0;
+  let trialing = 0;
+  let currency = "eur";
 
-      active++;
-      for (const item of subscription.items?.data ?? []) {
-        mrr += monthlyAmount(item.price) * (item.quantity ?? 1);
-      }
+  for (const subscription of subscriptions) {
+    if (subscription.currency) currency = subscription.currency;
+    if (subscription.status === "trialing") trialing++;
+    if (subscription.status !== "active") continue;
+
+    active++;
+    for (const item of subscription.items?.data ?? []) {
+      mrr += monthlyAmount(item.price) * (item.quantity ?? 1);
     }
-
-    if (!list.has_more || list.data.length === 0) break;
-    startingAfter = list.data[list.data.length - 1]?.id;
-    truncated = list.has_more && page === SUBSCRIPTION_PAGES - 1;
   }
 
   return {
@@ -147,8 +150,9 @@ async function fetchSubscriptions(key: string): Promise<RevenueSummary> {
   };
 }
 
-export const stripeConnector: Connector = {
+export const stripeConnector: Connector<StripeDashboard, "stripe"> = {
   provider: "stripe",
+  fetchDashboard: fetchStripeDashboard,
   async test(credentials: ConnectionCredentials): Promise<TestResult> {
     const key = credentials.apiKey?.trim();
     if (!key) return { ok: false, message: "API key is required" };
@@ -169,7 +173,7 @@ export async function fetchStripeDashboard(
   const key = credentials.apiKey?.trim();
   if (!key) throw new Error("Stripe API key is required");
 
-  const since = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
+  const since = Math.floor(daysAgo(30).getTime() / 1000);
 
   const [revenue, charges, balance] = await Promise.all([
     fetchSubscriptions(key),
@@ -180,7 +184,12 @@ export async function fetchStripeDashboard(
     stripeFetch<{
       available?: Array<{ amount: number; currency: string }>;
       pending?: Array<{ amount: number; currency: string }>;
-    }>(key, "/balance").catch(() => null),
+    }>(key, "/balance").catch((error: unknown) => {
+      // A restricted key can be granted charges without balance; the balance
+      // card goes empty and revenue still renders.
+      log.debug("balance unavailable", { reason: describeError(error) });
+      return null;
+    }),
   ]);
 
   const succeeded = charges.data.filter(

@@ -10,7 +10,13 @@ import {
 } from "./resend";
 import type { ResendMetricTotals } from "./types";
 import { deployStateLabel, deployStatus } from "./vercel";
-import { COMING_SOON_PROVIDERS, LIVE_PROVIDERS, getConnector } from "./index";
+import {
+  COMING_SOON_PROVIDERS,
+  CONNECTORS,
+  LIVE_PROVIDERS,
+  getConnector,
+  isSyncableProvider,
+} from "./index";
 
 describe("Lemon Squeezy order status", () => {
   it("maps the paid states", () => {
@@ -190,19 +196,40 @@ describe("connector registry", () => {
     }
   });
 
-  it("covers all eight Wave 1 providers", () => {
-    for (const provider of [
+  it("covers all nine live providers, and nothing else", () => {
+    // Spelled out on purpose: dropping a provider from either list by
+    // accident should fail here rather than silently stop its syncs.
+    const expected = [
       "railway",
-      "supabase",
-      "qonto",
-      "stripe",
-      "resend",
-      "sentry",
-      "lemonsqueezy",
       "vercel",
-    ]) {
-      expect(LIVE_PROVIDERS, provider).toContain(provider);
+      "netlify",
+      "supabase",
+      "sentry",
+      "stripe",
+      "lemonsqueezy",
+      "resend",
+      "qonto",
+    ];
+    expect([...LIVE_PROVIDERS].sort()).toEqual([...expected].sort());
+    expect(Object.keys(CONNECTORS).sort()).toEqual([...expected].sort());
+  });
+
+  it("registers each connector under the provider it serves", () => {
+    for (const [key, connector] of Object.entries(CONNECTORS)) {
+      expect(connector.provider, key).toBe(key);
+      expect(typeof connector.test, key).toBe("function");
+      expect(typeof connector.fetchDashboard, key).toBe("function");
+      expect(getConnector(key), key).toBe(connector);
     }
+  });
+
+  it("only treats registered providers as syncable", () => {
+    expect(isSyncableProvider("railway")).toBe(true);
+    expect(isSyncableProvider("github")).toBe(false);
+    // A provider string straight from the database must not reach the
+    // prototype chain.
+    expect(isSyncableProvider("toString")).toBe(false);
+    expect(getConnector("constructor")).toBeNull();
   });
 
   it("does not offer a connector for a coming-soon provider", () => {

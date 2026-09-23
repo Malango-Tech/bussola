@@ -1,0 +1,217 @@
+{
+  "stores": {
+    "meta": {
+      "page": { "currentPage": 1, "from": 1, "lastPage": 1, "perPage": 10, "to": 1, "total": 1 }
+    },
+    "jsonapi": { "version": "1.0" },
+    "links": { "first": "https://api.lemonsqueezy.com/v1/stores?page%5Bnumber%5D=1&page%5Bsize%5D=10" },
+    "data": [
+      {
+        "type": "stores",
+        "id": "4821",
+        "attributes": {
+          "name": "Pixel Press",
+          "slug": "pixel-press",
+          "domain": "pixel-press.lemonsqueezy.com",
+          "url": "https://pixel-press.lemonsqueezy.com",
+          "plan": "fresh",
+          "country": "DE",
+          "country_nicename": "Germany",
+          "currency": "USD",
+          "total_sales": 412,
+          "total_revenue": 1250000,
+          "thirty_day_sales": 31,
+          "thirty_day_revenue": 84900,
+          "created_at": "2024-02-11T09:14:02.000000Z",
+          "updated_at": "2026-09-20T08:00:00.000000Z"
+        }
+      }
+    ]
+  },
+  "orders": {
+    "meta": {
+      "page": { "currentPage": 1, "from": 1, "lastPage": 1, "perPage": 25, "to": 4, "total": 4 }
+    },
+    "jsonapi": { "version": "1.0" },
+    "data": [
+      {
+        "type": "orders",
+        "id": "902211",
+        "attributes": {
+          "store_id": 4821,
+          "identifier": "2a1b3c4d-0001-4e5f-8a9b-000000000001",
+          "order_number": 1412,
+          "user_name": "Grace Hopper",
+          "user_email": "grace@example.com",
+          "currency": "USD",
+          "status": "paid",
+          "total": 2900,
+          "total_formatted": "$29.00",
+          "refunded": false,
+          "first_order_item": { "product_name": "Pixel Press Pro", "variant_name": "Monthly" },
+          "created_at": "2026-09-20T09:30:00.000000Z"
+        }
+      },
+      {
+        "type": "orders",
+        "id": "902198",
+        "attributes": {
+          "store_id": 4821,
+          "identifier": "2a1b3c4d-0002-4e5f-8a9b-000000000002",
+          "order_number": 1411,
+          "user_name": null,
+          "user_email": "linus@example.com",
+          "currency": "EUR",
+          "status": "refunded",
+          "total": 4900,
+          "refunded": true,
+          "first_order_item": { "product_name": "Icon Pack", "variant_name": "Default" },
+          "created_at": "2026-09-19T15:00:00.000000Z"
+        }
+      },
+      {
+        "type": "orders",
+        "id": "902150",
+        "attributes": {
+          "store_id": 4821,
+          "identifier": "2a1b3c4d-0003-4e5f-8a9b-000000000003",
+          "order_number": 1410,
+          "user_name": "Ada Lovelace",
+          "user_email": "ada@example.com",
+          "status": "pending",
+          "total": 1900,
+          "first_order_item": null,
+          "created_at": "2026-09-18T11:00:00.000000Z"
+        }
+      },
+      {
+        "type": "orders",
+        "id": "902101",
+        "attributes": {
+          "store_id": 4821,
+          "identifier": "2a1b3c4d-0004-4e5f-8a9b-000000000004",
+          "order_number": 1409,
+          "user_email": "",
+          "currency": "USD",
+          "status": "fraudulent",
+          "total": 9900,
+          "first_order_item": { "product_name": "Pixel Press Pro", "variant_name": "Yearly" },
+          "created_at": "2026-09-17T11:00:00.000000Z"
+        }
+      }
+    ]
+  },
+  "subscriptionsPage1": {
+    "meta": {
+      "page": { "currentPage": 1, "from": 1, "lastPage": 2, "perPage": 100, "to": 100, "total": 104 }
+    },
+    "jsonapi": { "version": "1.0" },
+    "data": [
+      {
+        "type": "subscriptions",
+        "id": "1001",
+        "attributes": {
+          "store_id": 4821,
+          "status": "active",
+          "product_name": "Pixel Press Pro",
+          "variant_name": "Monthly",
+          "first_subscription_item": { "id": 7001, "price_id": 5001, "quantity": 1 }
+        }
+      },
+      {
+        "type": "subscriptions",
+        "id": "1002",
+        "attributes": {
+          "store_id": 4821,
+          "status": "on_trial",
+          "product_name": "Pixel Press Pro",
+          "variant_name": "Monthly",
+          "first_subscription_item": { "id": 7002, "price_id": 5001, "quantity": 1 }
+        }
+      }
+    ]
+  },
+  "subscriptionsPage2": {
+    "meta": {
+      "page": { "currentPage": 2, "from": 101, "lastPage": 2, "perPage": 100, "to": 104, "total": 104 }
+    },
+    "jsonapi": { "version": "1.0" },
+    "data": [
+      {
+        "type": "subscriptions",
+        "id": "1003",
+        "attributes": {
+          "store_id": 4821,
+          "status": "past_due",
+          "product_name": "Pixel Press Pro",
+          "variant_name": "Yearly",
+          "first_subscription_item": { "id": 7003, "price_id": 5002, "quantity": 1 }
+        }
+      },
+      {
+        "type": "subscriptions",
+        "id": "1004",
+        "attributes": {
+          "store_id": 4821,
+          "status": "cancelled",
+          "product_name": "Pixel Press Pro",
+          "variant_name": "Monthly",
+          "first_subscription_item": null
+        }
+      }
+    ]
+  },
+  "subscriptionInvoices": {
+    "meta": {
+      "page": { "currentPage": 1, "from": 1, "lastPage": 1, "perPage": 100, "to": 3, "total": 3 }
+    },
+    "jsonapi": { "version": "1.0" },
+    "data": [
+      {
+        "type": "subscription-invoices",
+        "id": "3001",
+        "attributes": {
+          "store_id": 4821,
+          "subscription_id": 1001,
+          "billing_reason": "renewal",
+          "status": "paid",
+          "currency": "USD",
+          "total": 2900,
+          "created_at": "2026-09-15T08:00:00.000000Z"
+        }
+      },
+      {
+        "type": "subscription-invoices",
+        "id": "3002",
+        "attributes": {
+          "store_id": 4821,
+          "subscription_id": 1003,
+          "billing_reason": "renewal",
+          "status": "paid",
+          "currency": "USD",
+          "total": 4900,
+          "created_at": "2026-08-25T08:00:00.000000Z"
+        }
+      },
+      {
+        "type": "subscription-invoices",
+        "id": "2950",
+        "attributes": {
+          "store_id": 4821,
+          "subscription_id": 1001,
+          "billing_reason": "renewal",
+          "status": "paid",
+          "currency": "USD",
+          "total": 2900,
+          "created_at": "2026-08-15T08:00:00.000000Z"
+        }
+      }
+    ]
+  },
+  "unauthenticated": {
+    "jsonapi": { "version": "1.0" },
+    "errors": [
+      { "detail": "Unauthenticated.", "status": "401", "title": "Unauthorized" }
+    ]
+  }
+}

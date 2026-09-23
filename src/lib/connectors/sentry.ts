@@ -9,10 +9,13 @@ import type {
 } from "./types";
 import { toUserFacingError } from "./errors";
 import { fetchJson } from "./http";
+import { connectorLogger, describeError } from "./shared/log";
 
 const BASE = "https://sentry.io/api/0";
 const ISSUE_LIMIT = 25;
 const PROJECT_LIMIT = 20;
+
+const log = connectorLogger("sentry");
 
 async function sentryFetch<T>(token: string, path: string): Promise<T> {
   return fetchJson<T>(
@@ -95,8 +98,9 @@ async function resolveOrganization(
   return first;
 }
 
-export const sentryConnector: Connector = {
+export const sentryConnector: Connector<SentryDashboard, "sentry"> = {
   provider: "sentry",
+  fetchDashboard: fetchSentryDashboard,
   async test(credentials: ConnectionCredentials): Promise<TestResult> {
     const token = credentials.apiKey?.trim();
     if (!token) return { ok: false, message: "API token is required" };
@@ -137,7 +141,15 @@ export async function fetchSentryDashboard(
     sentryFetch<SentryProject[]>(
       token,
       `/organizations/${organization.slug}/projects/`,
-    ).catch(() => [] as SentryProject[]),
+    ).catch((error: unknown) => {
+      // Issues need `event:read`, projects `project:read`; a token with only
+      // the first still gets its issue list.
+      log.debug("projects unavailable", {
+        organization: organization.slug,
+        reason: describeError(error),
+      });
+      return [] as SentryProject[];
+    }),
   ]);
 
   const items: SentryIssueItem[] = issues.map((issue) => ({

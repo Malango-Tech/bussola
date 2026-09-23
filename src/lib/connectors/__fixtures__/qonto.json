@@ -1,0 +1,143 @@
+{
+  "organization": {
+    "organization": {
+      "id": "7e6b4c1a-2f3d-4e5a-9b8c-1d2e3f4a5b6c",
+      "name": "Atelier Lune SAS",
+      "slug": "atelier-lune-1234",
+      "legal_name": "ATELIER LUNE",
+      "locale": "fr",
+      "legal_share_capital": 1000,
+      "legal_country": "FR",
+      "legal_registration_date": "2022-03-14",
+      "legal_form": "SAS",
+      "bank_accounts": [
+        {
+          "id": "acc-main-0001",
+          "slug": "atelier-lune-1234-bank-account-1",
+          "iban": "FR7616958000014567890123456",
+          "bic": "QNTOFRP1XXX",
+          "currency": "EUR",
+          "balance": 12450.5,
+          "balance_cents": 1245050,
+          "authorized_balance": 12100.5,
+          "authorized_balance_cents": 1210050,
+          "name": "Compte principal",
+          "updated_at": "2026-09-20T11:00:00.000Z",
+          "status": "active",
+          "main": true,
+          "is_external_account": false
+        },
+        {
+          "id": "acc-tax-0002",
+          "slug": "atelier-lune-1234-bank-account-2",
+          "iban": "FR7616958000019876543210987",
+          "bic": "QNTOFRP1XXX",
+          "currency": "EUR",
+          "balance_cents": 350000,
+          "authorized_balance_cents": 350000,
+          "name": "Provision TVA",
+          "updated_at": "2026-09-20T11:00:00.000Z",
+          "status": "active",
+          "main": false,
+          "is_external_account": false
+        },
+        {
+          "id": "acc-closed-0003",
+          "slug": "atelier-lune-1234-bank-account-3",
+          "currency": "EUR",
+          "balance": 0,
+          "balance_cents": 0,
+          "name": "Ancien compte",
+          "status": "closed",
+          "main": false,
+          "is_external_account": false
+        },
+        {
+          "id": "acc-ext-0004",
+          "slug": "atelier-lune-1234-bank-account-4",
+          "currency": "EUR",
+          "balance": 999,
+          "balance_cents": 99900,
+          "name": "Revolut Business",
+          "status": "active",
+          "main": false,
+          "is_external_account": true
+        }
+      ]
+    }
+  },
+  "transactions": [
+    {
+      "transaction_id": "atelier-lune-1234-1-transaction-893",
+      "id": "tx-0003-pending",
+      "amount": 450,
+      "amount_cents": 45000,
+      "side": "debit",
+      "operation_type": "card",
+      "currency": "EUR",
+      "label": "Adobe Creative Cloud",
+      "settled_at": null,
+      "emitted_at": "2026-09-19T08:00:00.000Z",
+      "updated_at": "2026-09-19T08:00:01.000Z",
+      "status": "pending",
+      "bank_account_id": "acc-main-0001"
+    },
+    {
+      "transaction_id": "atelier-lune-1234-1-transaction-892",
+      "id": "tx-0002-credit",
+      "amount": 1200,
+      "amount_cents": 120000,
+      "side": "credit",
+      "operation_type": "income",
+      "currency": "EUR",
+      "label": "Client Dupont — Facture F-2026-041",
+      "settled_at": "2026-09-18T09:12:00.000Z",
+      "emitted_at": "2026-09-17T16:00:00.000Z",
+      "status": "completed",
+      "bank_account_id": "acc-main-0001"
+    },
+    {
+      "transaction_id": "atelier-lune-1234-1-transaction-890",
+      "id": "tx-0001-debit",
+      "amount": 89.99,
+      "amount_cents": 8999,
+      "side": "debit",
+      "operation_type": "direct_debit",
+      "currency": "EUR",
+      "label": "OVH Cloud",
+      "settled_at": "2026-09-15T06:30:00.000Z",
+      "emitted_at": "2026-09-15T06:30:00.000Z",
+      "status": "completed",
+      "bank_account_id": "acc-main-0001"
+    },
+    {
+      "transaction_id": "atelier-lune-1234-2-transaction-114",
+      "id": "tx-0004-urssaf",
+      "amount_cents": 30000,
+      "side": "debit",
+      "operation_type": "direct_debit",
+      "currency": "EUR",
+      "label": "URSSAF",
+      "settled_at": "2026-09-10T07:00:00.000Z",
+      "emitted_at": "2026-09-10T07:00:00.000Z",
+      "status": "completed",
+      "bank_account_id": "acc-tax-0002"
+    },
+    {
+      "transaction_id": "atelier-lune-1234-1-transaction-888",
+      "id": "tx-0000-declined",
+      "amount": 25,
+      "amount_cents": 2500,
+      "side": "debit",
+      "operation_type": "card",
+      "currency": "EUR",
+      "label": "Parking",
+      "settled_at": "2026-09-12T18:00:00.000Z",
+      "status": "declined",
+      "bank_account_id": "acc-main-0001"
+    }
+  ],
+  "unauthorized": {
+    "errors": [{ "code": "unauthorized", "detail": "The access token is invalid" }]
+  }
+}
