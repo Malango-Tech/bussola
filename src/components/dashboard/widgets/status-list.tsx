@@ -3,7 +3,20 @@
 import { SourceIcon } from "@/components/brand/source-icons";
 import type { Provider } from "@/lib/providers";
 
-export function StatusDot({ status }: { status: string }) {
+/**
+ * A colored status dot.
+ *
+ * Decorative by default, because it usually sits next to a word that says the
+ * same thing. Where the dot is the only signal, `announce` adds that word for
+ * screen readers — color alone would otherwise be the whole message.
+ */
+export function StatusDot({
+  status,
+  announce = false,
+}: {
+  status: string;
+  announce?: boolean;
+}) {
   const color =
     status === "ok"
       ? "bg-success"
@@ -12,11 +25,18 @@ export function StatusDot({ status }: { status: string }) {
         : status === "error"
           ? "bg-destructive"
           : "bg-muted-foreground/40";
-  return (
+  const dot = (
     <span
       className={`inline-block size-2 shrink-0 rounded-full ${color}`}
       aria-hidden
     />
+  );
+  if (!announce) return dot;
+  return (
+    <>
+      {dot}
+      <span className="sr-only">{statusLabel(status)}</span>
+    </>
   );
 }
 

@@ -46,7 +46,8 @@ export function BarChart({ rows, className }: BarChartProps) {
                 {row.display}
               </span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-muted">
+            {/* The label and figure above already say it; the bar only draws it. */}
+            <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
               <div
                 className={cn(
                   "h-full rounded-full transition-[width] duration-500",
