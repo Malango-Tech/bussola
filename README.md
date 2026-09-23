@@ -43,6 +43,28 @@ account only you hold, then:
 Until a source is connected, widgets render clearly-labelled sample data rather
 than empty boxes, so you can see what each one does before pasting any token.
 
+### Docker
+
+One image serves the app, the standalone worker and migrations:
+
+```bash
+docker build -t bussola .
+docker run -p 3000:3000 -v bussola-data:/app/data bussola      # PGlite, data in the volume
+docker run -e DATABASE_URL=… bussola npm run db:migrate        # hosted: migrate as a deploy step
+docker run -e DATABASE_URL=… bussola npm run worker            # hosted: separate sync worker
+```
+
+### Development
+
+```bash
+npm run lint && npm run typecheck && npm test   # what CI runs, plus build and audit
+npm run test:coverage
+```
+
+CI (`.github/workflows/ci.yml`) runs those on every pull request, builds the app
+and the Docker image, audits production dependencies and fails if
+`src/lib/db/schema.ts` changed without a committed migration.
+
 ## Database
 
 Bussola speaks Postgres, and only Postgres — one schema, one migration set, the
@@ -238,9 +260,14 @@ window. A lost link is revoked and replaced rather than looked up.
 The shared page renders the same components the owner sees, with edit mode off,
 and every request it makes is checked against the token again — on three axes:
 
-- **Which widgets.** The requested type must match a widget on the shared
-  dashboard, so a link to a deploy board cannot also answer for the
-  organization's Qonto balance.
+- **Which widgets.** The requested type must belong to a source with a widget
+  on the shared dashboard, so a link to a deploy board cannot also answer for
+  the organization's Qonto balance. Live bank transactions answer only if that
+  exact widget is shared, and the snapshot is trimmed to the fields the shared
+  widgets read (`src/lib/widgets/fields.ts`, kept honest by a test that renders
+  every widget from the trimmed payload).
+- **Which account.** A request that names no connection is answered from the
+  provider's default account only if a shared widget itself reads the default.
 - **Which connections.** Cross-source widgets are capped to the connections the
   dashboard binds, so a status board cannot enumerate every source connected.
 - **Which rows.** The dashboard's own scope, limit and range are applied
@@ -324,7 +351,22 @@ forwarded link cannot be redeemed by whoever it was forwarded to.
 
 With no mail provider configured, invitations are still created and the link is
 shown to copy — a self-hosted install without SMTP is a normal case, not a
-broken one.
+broken one. The cloud edition with a mail provider requires a confirmed email
+address before signing in or accepting an invitation.
+
+Roles are `member`, `admin` and `owner` (`src/lib/auth/roles.ts`, one table the
+server enforces and the UI reads to hide controls):
+
+| | member | admin | owner |
+|---|:---:|:---:|:---:|
+| Dashboards, widgets, alert rules | ✓ | ✓ | ✓ |
+| Connections and their credentials, share links, alert channels, API tokens, members | | ✓ | ✓ |
+| Billing | | | ✓ |
+
+Removing someone ends their sessions in the organization and revokes the API
+tokens they minted, and the membership is re-read on every request — so access
+ends with the removal, not when a thirty-day session happens to expire. An
+admin cannot remove an owner.
 
 ## Plans
 
@@ -380,7 +422,12 @@ Self-hosted keeps everything.
 ## Local private use
 
 - Data lives in `./data/pgdata` (or your `DATABASE_URL` server)
-- API secrets are encrypted with AES-256-GCM
+- API secrets are encrypted with AES-256-GCM. Without `BUSSOLA_ENCRYPTION_KEY`
+  a random key is generated once in `./data/encryption-key` — back it up with
+  the database. Secrets written by earlier versions with the old built-in
+  fallback key are re-encrypted with the current key on startup
+- Every response carries a Content-Security-Policy, `X-Frame-Options: DENY`,
+  `Referrer-Policy: no-referrer` (share tokens live in URLs) and HSTS
 - Auth is [Better Auth](https://better-auth.com): email + password, sessions in
   your own database, CSRF-checked, no third-party identity service
 - Light / dark theme with the Bussola palette and **Elms Sans**
