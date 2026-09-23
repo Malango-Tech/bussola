@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` fails when package-lock.json has drifted from package.json,
+      # which is exactly the drift this job exists to catch.
+      - run: npm ci
+
+      # The tenant boundary is a lint rule (see eslint.config.mjs), so this is
+      # also the check that no route handler queries the database directly.
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+      - run: npm run build
+
+      # Production dependencies only: dev tooling advisories do not ship.
+      - run: npm audit --omit=dev --audit-level=high
+
+      # Fails when schema.ts changed without a committed migration.
+      - name: Migrations match the schema
+        run: |
+          npx drizzle-kit generate
+          if [ -n "$(git status --porcelain -- drizzle/)" ]; then
+            git status --short -- drizzle/
+            echo "::error::src/lib/db/schema.ts changed without a migration. Run npm run db:generate and commit drizzle/."
+            exit 1
+          fi
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
