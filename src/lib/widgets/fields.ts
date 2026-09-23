@@ -14,6 +14,11 @@ import type { WidgetType } from "./registry";
  * `Record` rather than `Partial<Record>` on purpose: a new widget type does not
  * compile until it says what it reads, so it cannot silently ship with an
  * empty (or unbounded) share payload.
+ *
+ * Kept honest by `fields.test.tsx`, which renders every widget from its full
+ * demo payload and from this projection of it and requires the two to match —
+ * so a field a renderer reads but this list forgets fails a test, not a share
+ * page.
  */
 export const WIDGET_FIELDS: Record<WidgetType, readonly string[]> = {
   "railway-tracker": ["deployHealth"],
@@ -46,11 +51,11 @@ export const WIDGET_FIELDS: Record<WidgetType, readonly string[]> = {
 
   "stripe-mrr": ["revenue"],
   "stripe-revenue": ["revenue", "volume30d"],
-  "stripe-payments": ["payments", "orders"],
+  "stripe-payments": ["payments"],
 
   "lemonsqueezy-mrr": ["revenue"],
   "lemonsqueezy-revenue": ["revenue", "revenue30d"],
-  "lemonsqueezy-orders": ["orders", "payments"],
+  "lemonsqueezy-orders": ["orders"],
 
   "sentry-issues": ["unresolved", "events24h", "truncated"],
   "sentry-recent": ["issues"],
@@ -76,7 +81,7 @@ export const WIDGET_FIELDS: Record<WidgetType, readonly string[]> = {
   "qonto-history": ["balanceHistory"],
   "qonto-transactions": ["transactions", "nextCursor", "hasMore"],
 
-  "status-board": ["items", "noSourcesSelected"],
+  "status-board": ["items"],
 };
 
 /**
