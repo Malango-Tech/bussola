@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, isNull, lt } from "drizzle-orm";
+import type { MemberRole } from "@/lib/auth/roles";
 import { createId } from "@/lib/id";
 import { getDb } from ".";
 import {
@@ -14,6 +15,7 @@ import {
   notificationChannels,
   dashboardWidgets,
   dashboards,
+  session,
   user,
   type AlertComparator,
   type ApiTokenScope,
@@ -29,6 +31,12 @@ import {
 export type TenantContext = {
   organizationId: string;
   userId: string;
+  /**
+   * The caller's role in the organization, for a person acting through a
+   * session. Absent for callers that are not a member (a share link, an MCP
+   * token, the worker), which therefore pass no role check.
+   */
+  role?: MemberRole;
 };
 
 /**
@@ -515,13 +523,17 @@ export function forTenant(ctx: TenantContext) {
       async removeMember(memberId: string) {
         const db = await getDb();
         const [target] = await db
-          .select({ id: member.id, role: member.role })
+          .select({ id: member.id, role: member.role, userId: member.userId })
           .from(member)
           .where(and(eq(member.id, memberId), eq(member.organizationId, org)))
           .limit(1);
         if (!target) return { ok: false as const, reason: "not_found" as const };
 
         if (target.role === "owner") {
+          // An admin may manage the team, not take it over from its owners.
+          if (ctx.role !== "owner") {
+            return { ok: false as const, reason: "forbidden" as const };
+          }
           const [owners] = await db
             .select({ value: count() })
             .from(member)
@@ -533,9 +545,35 @@ export function forTenant(ctx: TenantContext) {
           }
         }
 
-        await db
-          .delete(member)
-          .where(and(eq(member.id, memberId), eq(member.organizationId, org)));
+        /*
+         * Removing the membership row is not enough on its own. The person's
+         * sessions still name this organization, and API tokens they minted
+         * act for it with no person behind them at all — so both go with
+         * them, in the same transaction, or neither does.
+         */
+        await db.transaction(async (tx) => {
+          await tx
+            .delete(member)
+            .where(and(eq(member.id, memberId), eq(member.organizationId, org)));
+          await tx
+            .delete(session)
+            .where(
+              and(
+                eq(session.userId, target.userId),
+                eq(session.activeOrganizationId, org),
+              ),
+            );
+          await tx
+            .update(apiTokens)
+            .set({ revokedAt: new Date() })
+            .where(
+              and(
+                eq(apiTokens.organizationId, org),
+                eq(apiTokens.userId, target.userId),
+                isNull(apiTokens.revokedAt),
+              ),
+            );
+        });
         return { ok: true as const };
       },
 

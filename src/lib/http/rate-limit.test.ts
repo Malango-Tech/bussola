@@ -1,9 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LIMITS, rateLimit, rateLimitHeaders, resetRateLimits } from "./rate-limit";
+import {
+  LIMITS,
+  callerAddress,
+  rateLimit,
+  rateLimitHeaders,
+  resetRateLimits,
+} from "./rate-limit";
 
 afterEach(() => {
   resetRateLimits();
   vi.useRealTimers();
+  delete process.env.BUSSOLA_TRUSTED_PROXY_HOPS;
 });
 
 const rule = { limit: 3, windowMs: 1000 };
@@ -86,5 +93,53 @@ describe("the configured limits", () => {
 
   it("meters credential guessing harder than legitimate use", () => {
     expect(LIMITS.mcpAnonymous.limit).toBeLessThan(LIMITS.mcp.limit);
+  });
+});
+
+describe("under a flood of distinct keys", () => {
+  it("evicts the stalest bucket instead of refusing every new caller", () => {
+    for (let i = 0; i < 20_000; i += 1) rateLimit(`flood:${i}`, rule);
+    // The map is full; a newcomer still gets in.
+    expect(rateLimit("flood:newcomer", rule).ok).toBe(true);
+  });
+
+  it("keeps namespaces apart, so one flood cannot crowd out another endpoint", () => {
+    for (let i = 0; i < 3; i += 1) rateLimit("mcp:agent", rule);
+    for (let i = 0; i < 20_000; i += 1) rateLimit(`share-data:${i}`, rule);
+    // The MCP caller's window was not evicted by the share-link flood.
+    expect(rateLimit("mcp:agent", rule).ok).toBe(false);
+  });
+
+  it("keeps a recently active caller's window through a flood", () => {
+    for (let i = 0; i < 3; i += 1) rateLimit("share-data:honest", rule);
+    for (let i = 0; i < 19_000; i += 1) rateLimit(`share-data:${i}`, rule);
+    rateLimit("share-data:honest", rule);
+    for (let i = 19_000; i < 21_000; i += 1) rateLimit(`share-data:${i}`, rule);
+    expect(rateLimit("share-data:honest", rule).ok).toBe(false);
+  });
+});
+
+describe("callerAddress", () => {
+  const request = (headers: Record<string, string>) =>
+    new Request("http://localhost/", { headers });
+
+  it("takes the address our proxy appended, not the one the client sent", () => {
+    expect(
+      callerAddress(request({ "x-forwarded-for": "6.6.6.6, 203.0.113.9" })),
+    ).toBe("203.0.113.9");
+  });
+
+  it("honours a configured number of trusted proxies", () => {
+    process.env.BUSSOLA_TRUSTED_PROXY_HOPS = "2";
+    expect(
+      callerAddress(
+        request({ "x-forwarded-for": "6.6.6.6, 198.51.100.4, 10.0.0.2" }),
+      ),
+    ).toBe("198.51.100.4");
+  });
+
+  it("falls back to x-real-ip, then to a constant", () => {
+    expect(callerAddress(request({ "x-real-ip": "192.0.2.1" }))).toBe("192.0.2.1");
+    expect(callerAddress(request({}))).toBe("unknown");
   });
 });

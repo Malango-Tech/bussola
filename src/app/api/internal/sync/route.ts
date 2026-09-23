@@ -1,5 +1,6 @@
 import { jsonError, jsonOk } from "@/lib/api";
 import { drainDeliveries } from "@/lib/alerts/outbox";
+import { hashToken, tokensMatch } from "@/lib/sharing/tokens";
 import { runDueSyncs } from "@/lib/sync/runner";
 
 export const runtime = "nodejs";
@@ -22,7 +23,9 @@ function authorized(request: Request): boolean {
     request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ??
     request.headers.get("x-sync-secret");
 
-  return Boolean(header) && header === expected;
+  // Compared as hashes in constant time: timing reveals neither how many
+  // leading characters matched nor how long the secret is.
+  return Boolean(header) && tokensMatch(hashToken(header!), hashToken(expected));
 }
 
 export async function POST(request: Request) {

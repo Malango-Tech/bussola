@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useState, useSyncExternalStore } from "react";
+import { RoleProvider } from "@/components/providers/role-provider";
+import type { MemberRole } from "@/lib/auth/roles";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -82,28 +84,33 @@ function writeCollapsed(next: boolean) {
 
 export function AppShell({
   children,
+  role,
   setupState,
   starredDashboards,
   unacknowledgedAlerts,
 }: {
   children: React.ReactNode;
+  /** The signed-in person's role, for hiding controls they cannot use. */
+  role: MemberRole;
   setupState: SetupState;
   starredDashboards: StarredDashboard[];
   /** Breaches nobody has looked at yet — the number on the Alerts item. */
   unacknowledgedAlerts: number;
 }) {
   return (
-    <CurrentDashboardProvider>
-      <SettingsModalProvider>
-        <AppShellBody
-          setupState={setupState}
-          starredDashboards={starredDashboards}
-          unacknowledgedAlerts={unacknowledgedAlerts}
-        >
-          {children}
-        </AppShellBody>
-      </SettingsModalProvider>
-    </CurrentDashboardProvider>
+    <RoleProvider role={role}>
+      <CurrentDashboardProvider>
+        <SettingsModalProvider>
+          <AppShellBody
+            setupState={setupState}
+            starredDashboards={starredDashboards}
+            unacknowledgedAlerts={unacknowledgedAlerts}
+          >
+            {children}
+          </AppShellBody>
+        </SettingsModalProvider>
+      </CurrentDashboardProvider>
+    </RoleProvider>
   );
 }
 

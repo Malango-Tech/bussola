@@ -1,6 +1,6 @@
 import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { apiTokens, type ApiTokenScope } from "@/lib/db/schema";
+import { apiTokens, member, type ApiTokenScope } from "@/lib/db/schema";
 import { forTenant, type TenantRepos } from "@/lib/db/tenant";
 import { hashToken, looksLikeToken } from "@/lib/sharing/tokens";
 
@@ -44,6 +44,15 @@ export async function resolveApiToken(
       scope: apiTokens.scope,
     })
     .from(apiTokens)
+    // A token outlives nothing about the person who minted it: once they are
+    // no longer a member, it stops working even if revoking it was missed.
+    .innerJoin(
+      member,
+      and(
+        eq(member.userId, apiTokens.userId),
+        eq(member.organizationId, apiTokens.organizationId),
+      ),
+    )
     .where(
       and(
         eq(apiTokens.tokenHash, hashToken(token)),

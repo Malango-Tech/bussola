@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { jsonError, jsonOk, withTenant } from "@/lib/api";
+import { jsonError, jsonOk, ROLE_FOR, withTenant } from "@/lib/api";
 import { validateChannelTarget } from "@/lib/alerts/deliver";
 import { entitlementsFor } from "@/lib/billing/entitlements";
 import { encryptSecret } from "@/lib/crypto/vault";
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     });
 
     return jsonOk({ channel: toDto(channel) }, { status: 201 });
-  });
+  }, { role: ROLE_FOR.manageChannels });
 }
 
 const updateSchema = z.object({
@@ -118,7 +118,7 @@ export async function PATCH(request: Request) {
     if (!channel) return jsonError("Channel not found", 404);
 
     return jsonOk({ channel: toDto(channel) });
-  });
+  }, { role: ROLE_FOR.manageChannels });
 }
 
 export async function DELETE(request: Request) {
@@ -130,5 +130,5 @@ export async function DELETE(request: Request) {
     const removed = await repos.channels.remove(id);
     if (!removed) return jsonError("Channel not found", 404);
     return jsonOk({ ok: true });
-  });
+  }, { role: ROLE_FOR.manageChannels });
 }

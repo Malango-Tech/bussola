@@ -32,6 +32,15 @@ export async function register() {
     return;
   }
 
+  try {
+    const { reencryptLegacySecrets } = await import("./lib/crypto/rotate");
+    await reencryptLegacySecrets();
+  } catch (error) {
+    // Legacy rows still decrypt, so a failed rotation is worth a log line,
+    // not a server that refuses to start.
+    console.error("[bussola] re-encrypting stored secrets failed:", error);
+  }
+
   if (process.env.BUSSOLA_DISABLE_INLINE_SYNC === "1") return;
 
   const { startScheduler } = await import("./lib/sync/scheduler");

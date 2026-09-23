@@ -1,4 +1,5 @@
 import { closeDb, databaseUrl, runMigrations } from "../lib/db";
+import { reencryptLegacySecrets } from "../lib/crypto/rotate";
 import { EDITION } from "../lib/edition";
 
 async function main() {
@@ -9,6 +10,9 @@ async function main() {
 
   await runMigrations();
   console.log("Migrations applied.");
+
+  const rotation = await reencryptLegacySecrets();
+  console.log(`Secrets re-encrypted: ${rotation.reencrypted}.`);
 
   await closeDb();
 }

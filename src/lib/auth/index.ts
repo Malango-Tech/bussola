@@ -10,6 +10,7 @@ import { and, count, eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { isCloud, isSelfHosted } from "@/lib/edition";
 import { createId } from "@/lib/id";
+import { emailConfigured } from "@/lib/notify/email";
 
 /**
  * Identity, in one place, for both editions.
@@ -92,6 +93,7 @@ function slugFor(email: string): string {
 
 async function build() {
   const db = await getDb();
+  const verifyEmail = isCloud && emailConfigured();
 
   return betterAuth({
     secret: secret(),
@@ -109,10 +111,47 @@ async function build() {
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 8,
-      // Phase 4 wires a real sender; until then a hosted deployment should keep
-      // verification off rather than send nothing and lock people out.
-      requireEmailVerification: false,
+      requireEmailVerification: verifyEmail,
     },
+
+    /*
+     * Cloud with a mail provider proves an address before it can sign in.
+     * Without that, anyone can register someone else's email — squatting the
+     * address, and accepting any invitation sent to it. Self-hosted has one
+     * account whose owner is at the keyboard, and a cloud deployment with no
+     * mail provider cannot send the link, so both keep verification off
+     * rather than lock everyone out.
+     */
+    emailVerification: verifyEmail
+      ? {
+          sendOnSignUp: true,
+          autoSignInAfterVerification: true,
+          expiresIn: 60 * 60 * 24,
+          async sendVerificationEmail({
+            user,
+            url,
+          }: {
+            user: { email: string; name: string };
+            url: string;
+          }) {
+            const { sendEmail } = await import("@/lib/notify/email");
+            const result = await sendEmail({
+              to: user.email,
+              subject: "Confirm your email for Bussola",
+              text: [
+                `Hi ${user.name || "there"},`,
+                "",
+                `Confirm your email address to finish creating your Bussola account: ${url}`,
+                "",
+                "The link is valid for 24 hours. If you did not sign up, you can ignore this email.",
+              ].join("\n"),
+            });
+            if (!result.ok) {
+              console.warn(`[auth] verification email not sent: ${result.error}`);
+            }
+          },
+        }
+      : undefined,
 
     session: {
       expiresIn: 60 * 60 * 24 * 30,
@@ -259,6 +298,9 @@ async function build() {
         // Self-hosted has exactly one organization; cloud lets an owner run
         // several (agency with multiple clients, say).
         allowUserToCreateOrganization: isCloud,
+        // An invitation is addressed to an email; only someone who has proven
+        // they hold it may accept.
+        requireEmailVerificationOnInvitation: verifyEmail,
       }),
       // Must stay last: it lets Better Auth set cookies from server actions.
       nextCookies(),

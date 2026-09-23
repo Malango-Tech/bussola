@@ -1,8 +1,9 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { forTenant, type TenantContext, type TenantRepos } from "@/lib/db/tenant";
+import { resolveSessionMembership } from "./membership";
+import type { MemberRole } from "./roles";
 import { getAuth } from ".";
 
 export class UnauthorizedError extends Error {
@@ -21,43 +22,24 @@ export type SessionUser = {
 /**
  * The verified identity behind the current request, or null.
  *
- * The organization comes from the session's active organization; if a session
- * predates its organization (or the active one was left), we fall back to the
- * user's membership so a signed-in account always has a tenant to act in.
+ * The organization and role come from the membership table on every request,
+ * never from the session row alone — see `resolveSessionMembership`.
  */
 export async function getSession(): Promise<{
   user: SessionUser;
   organizationId: string;
+  role: MemberRole;
 } | null> {
   const auth = await getAuth();
   const result = await auth.api.getSession({ headers: await headers() });
   if (!result) return null;
 
-  let organizationId = result.session.activeOrganizationId ?? null;
-
-  if (!organizationId) {
-    // A session opened during sign-up is created before the account's
-    // organization exists, so it starts with no active organization. Resolve it
-    // from the membership and write it back, so this costs one extra query once
-    // per session rather than on every request.
-    const db = await getDb();
-    const [membership] = await db
-      .select({ organizationId: schema.member.organizationId })
-      .from(schema.member)
-      .where(eq(schema.member.userId, result.user.id))
-      .limit(1);
-
-    organizationId = membership?.organizationId ?? null;
-
-    if (organizationId) {
-      await db
-        .update(schema.session)
-        .set({ activeOrganizationId: organizationId })
-        .where(eq(schema.session.id, result.session.id));
-    }
-  }
-
-  if (!organizationId) return null;
+  const membership = await resolveSessionMembership({
+    userId: result.user.id,
+    sessionId: result.session.id,
+    activeOrganizationId: result.session.activeOrganizationId,
+  });
+  if (!membership) return null;
 
   return {
     user: {
@@ -65,7 +47,8 @@ export async function getSession(): Promise<{
       email: result.user.email,
       name: result.user.name,
     },
-    organizationId,
+    organizationId: membership.organizationId,
+    role: membership.role,
   };
 }
 
@@ -83,6 +66,7 @@ export async function getTenant(): Promise<TenantRepos | null> {
   return forTenant({
     organizationId: session.organizationId,
     userId: session.user.id,
+    role: session.role,
   });
 }
 
@@ -116,4 +100,4 @@ export async function hasAccount(): Promise<boolean> {
   return rows.length > 0;
 }
 
-export type { TenantContext, TenantRepos };
+export type { MemberRole, TenantContext, TenantRepos };

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { jsonError, jsonOk, withTenant } from "@/lib/api";
+import { jsonError, jsonOk, ROLE_FOR, withTenant } from "@/lib/api";
 import { deliver } from "@/lib/alerts/deliver";
 import { entitlementsFor } from "@/lib/billing/entitlements";
 import { decryptSecret } from "@/lib/crypto/vault";
@@ -81,5 +81,5 @@ export async function POST(request: Request) {
     return result.ok
       ? jsonOk({ ok: true })
       : jsonOk({ ok: false, error: result.error }, { status: 200 });
-  });
+  }, { role: ROLE_FOR.manageChannels });
 }

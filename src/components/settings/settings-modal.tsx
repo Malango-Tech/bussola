@@ -143,13 +143,13 @@ function GeneralTab() {
         />
         <div className="flex items-center gap-2">
           <Badge variant={encryptionConfigured ? "secondary" : "outline"}>
-            {encryptionConfigured ? "Custom key set" : "Dev fallback key"}
+            {encryptionConfigured ? "Custom key set" : "Generated local key"}
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          Set <code className="text-foreground">BUSSOLA_ENCRYPTION_KEY</code>{" "}
-          in your environment to a 64-char hex string for production-grade
-          local secret storage.
+          Without <code className="text-foreground">BUSSOLA_ENCRYPTION_KEY</code>,
+          a random key is generated in the data directory. Back it up with the
+          database: without it, stored credentials cannot be decrypted.
         </p>
       </section>
     </div>

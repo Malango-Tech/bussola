@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { jsonError, jsonOk, withTenant } from "@/lib/api";
+import { jsonError, jsonOk, ROLE_FOR, withTenant } from "@/lib/api";
 import { entitlementsFor } from "@/lib/billing/entitlements";
 import { mintToken } from "@/lib/sharing/tokens";
 
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       },
       { status: 201 },
     );
-  });
+  }, { role: ROLE_FOR.manageTokens });
 }
 
 export async function DELETE(request: Request) {
@@ -81,5 +81,5 @@ export async function DELETE(request: Request) {
     const revoked = await repos.apiTokens.revoke(id);
     if (!revoked) return jsonError("Token not found or already revoked", 404);
     return jsonOk({ ok: true });
-  });
+  }, { role: ROLE_FOR.manageTokens });
 }
