@@ -41,6 +41,13 @@ type Props = {
   widgetCount: number;
   /** A request for this card's connection is in flight. */
   busy: boolean;
+  /**
+   * Whether this person may add, replace or remove connections. Refresh and
+   * test stay available to everyone: they change nothing but the snapshot.
+   */
+  canManage: boolean;
+  /** The hint explaining why Connect is disabled, when it is. */
+  permissionHintId?: string;
   onConnect: () => void;
   onEdit: (connection: ConnectionView) => void;
   onRefresh: (connection: ConnectionView) => void;
@@ -54,6 +61,8 @@ export function ConnectionCard({
   connection,
   widgetCount,
   busy,
+  canManage,
+  permissionHintId,
   onConnect,
   onEdit,
   onRefresh,
@@ -153,44 +162,54 @@ export function ConnectionCard({
             >
               Test
             </Button>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label={`Edit ${entry.name} connection`}
-                    onClick={() => onEdit(connection)}
-                  >
-                    <PencilSimpleIcon className="size-3" />
-                  </Button>
-                }
-              />
-              <TooltipContent>Replace credentials</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label={`Remove ${entry.name} connection`}
-                    disabled={busy}
-                    onClick={() => onRemove(connection)}
-                  >
-                    <TrashIcon className="size-3" />
-                  </Button>
-                }
-              />
-              <TooltipContent>Remove</TooltipContent>
-            </Tooltip>
+            {canManage ? (
+              <>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label={`Edit ${entry.name} connection`}
+                        onClick={() => onEdit(connection)}
+                      >
+                        <PencilSimpleIcon className="size-3" />
+                      </Button>
+                    }
+                  />
+                  <TooltipContent>Replace credentials</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label={`Remove ${entry.name} connection`}
+                        disabled={busy}
+                        onClick={() => onRemove(connection)}
+                      >
+                        <TrashIcon className="size-3" />
+                      </Button>
+                    }
+                  />
+                  <TooltipContent>Remove</TooltipContent>
+                </Tooltip>
+              </>
+            ) : null}
           </div>
         </>
       ) : (
         <div className="mt-auto flex items-center gap-2 pt-1">
-          <Button type="button" size="xs" onClick={onConnect}>
+          <Button
+            type="button"
+            size="xs"
+            disabled={!canManage}
+            aria-describedby={canManage ? undefined : permissionHintId}
+            onClick={onConnect}
+          >
             <PlugsIcon className="size-3" />
             Connect
           </Button>

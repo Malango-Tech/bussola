@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { readJson } from "@/components/api-client";
 import { SectionHeading } from "@/components/layout/page";
+import { PermissionHint } from "@/components/layout/permission-hint";
+import { useCan } from "@/components/providers/role-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -33,6 +36,8 @@ type BillingState = {
 
 type Interval = "monthly" | "yearly";
 
+const PERMISSION_HINT_ID = "billing-permission-hint";
+
 /**
  * Renders nothing unless this deployment actually takes payments, so the
  * self-hosted edition never shows a plan it does not have.
@@ -41,6 +46,9 @@ export function BillingSection() {
   const [state, setState] = useState<BillingState | null>(null);
   const [interval, setInterval] = useState<Interval>("monthly");
   const [pending, setPending] = useState(false);
+  // Everyone can see what the plan allows; only an owner can change what the
+  // organization pays for, so the buttons stay visible but inert for others.
+  const canManage = useCan("manageBilling");
 
   useEffect(() => {
     void fetch("/api/billing")
@@ -63,7 +71,7 @@ export function BillingSection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body ?? {}),
       });
-      const data = (await res.json()) as { url?: string; error?: string };
+      const data = await readJson<{ url: string }>(res);
       if (!res.ok || !data.url) {
         toast.error(data.error || "Could not reach the billing portal");
         return;
@@ -120,6 +128,12 @@ export function BillingSection() {
         <p className="text-sm text-muted-foreground">Renews {renews}.</p>
       ) : null}
 
+      {!canManage ? (
+        <PermissionHint permission="manageBilling" id={PERMISSION_HINT_ID}>
+          change the plan or billing details
+        </PermissionHint>
+      ) : null}
+
       {state.plans.length > 0 ? (
         <div className="space-y-3">
           <IntervalToggle value={interval} onChange={setInterval} />
@@ -131,7 +145,8 @@ export function BillingSection() {
                   key={plan.id}
                   variant="outline"
                   size="sm"
-                  disabled={pending}
+                  disabled={pending || !canManage}
+                  aria-describedby={canManage ? undefined : PERMISSION_HINT_ID}
                   onClick={() =>
                     open("/api/billing/checkout", { plan: plan.id, interval })
                   }
@@ -146,7 +161,8 @@ export function BillingSection() {
       <Button
         variant="ghost"
         size="sm"
-        disabled={pending}
+        disabled={pending || !canManage}
+        aria-describedby={canManage ? undefined : PERMISSION_HINT_ID}
         onClick={() => open("/api/billing/portal")}
       >
         Manage billing

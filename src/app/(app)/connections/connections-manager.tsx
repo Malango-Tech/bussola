@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, SectionHeading } from "@/components/layout/page";
+import { PermissionHint } from "@/components/layout/permission-hint";
+import { useCan } from "@/components/providers/role-provider";
 import { SourceIcon } from "@/components/brand/source-icons";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -20,6 +22,8 @@ import { PROVIDER_CATALOG } from "@/lib/connectors/catalog";
 import type { Provider } from "@/lib/providers";
 
 export type { ConnectionView };
+
+const PERMISSION_HINT_ID = "connections-permission-hint";
 
 type Props = {
   connections: ConnectionView[];
@@ -41,6 +45,7 @@ export function ConnectionsManager({
     connection?: ConnectionView;
   } | null>(null);
   const actions = useConnectionActions(widgetCounts);
+  const canManage = useCan("manageConnections");
 
   const byProvider = new Map(connections.map((c) => [c.provider, c]));
 
@@ -56,6 +61,15 @@ export function ConnectionsManager({
           title="Sources"
           description={`${connections.length} of ${liveProviders.length} connected`}
         />
+        {!canManage ? (
+          <PermissionHint
+            permission="manageConnections"
+            id={PERMISSION_HINT_ID}
+          >
+            connect, replace or remove a source — you can still refresh and
+            test the ones already here
+          </PermissionHint>
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {liveProviders.map((provider) => {
             const connection = byProvider.get(provider);
@@ -66,6 +80,8 @@ export function ConnectionsManager({
                 connection={connection}
                 widgetCount={widgetCounts[provider] ?? 0}
                 busy={connection !== undefined && actions.busy === connection.id}
+                canManage={canManage}
+                permissionHintId={PERMISSION_HINT_ID}
                 onConnect={() => setEditing({ provider })}
                 onEdit={(existing) =>
                   setEditing({ provider, connection: existing })

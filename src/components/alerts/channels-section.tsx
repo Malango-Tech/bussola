@@ -4,6 +4,8 @@ import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { PaperPlaneTiltIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { SectionHeading } from "@/components/layout/page";
+import { PermissionHint } from "@/components/layout/permission-hint";
+import { useCan } from "@/components/providers/role-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChannelForm } from "./channel-form";
@@ -40,6 +42,9 @@ export function ChannelsSection({
 }: Props) {
   const [showForm, setShowForm] = useState(false);
   const alertsAvailable = allowedChannels.length > 0;
+  // A channel is a destination outside the organization, and its webhook URL
+  // is a credential: members see where alerts go, admins decide it.
+  const canManage = useCan("manageChannels");
 
   return (
     <section className="space-y-3">
@@ -47,7 +52,7 @@ export function ChannelsSection({
         title="Channels"
         description="Where alerts go. Without one, a rule still records here but reaches nobody."
         actions={
-          alertsAvailable ? (
+          alertsAvailable && canManage ? (
             <Button
               type="button"
               variant="outline"
@@ -61,7 +66,13 @@ export function ChannelsSection({
         }
       />
 
-      {showForm ? (
+      {alertsAvailable && !canManage ? (
+        <PermissionHint permission="manageChannels">
+          add, test or remove a channel
+        </PermissionHint>
+      ) : null}
+
+      {showForm && canManage ? (
         <ChannelForm
           allowedChannels={allowedChannels}
           emailReady={emailReady}
@@ -86,6 +97,7 @@ export function ChannelsSection({
               key={channel.id}
               channel={channel}
               testing={testing === channel.id}
+              canManage={canManage}
               onDelete={onDelete}
               onTest={onTest}
             />
@@ -99,11 +111,13 @@ export function ChannelsSection({
 function ChannelItem({
   channel,
   testing,
+  canManage,
   onDelete,
   onTest,
 }: {
   channel: ChannelRow;
   testing: boolean;
+  canManage: boolean;
   onDelete: Props["onDelete"];
   onTest: Props["onTest"];
 }) {
@@ -125,25 +139,29 @@ function ChannelItem({
           <p className="text-xs text-muted-foreground">Nothing sent yet</p>
         )}
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={testing}
-        onClick={() => onTest(channel)}
-      >
-        <PaperPlaneTiltIcon className="size-3.5" />
-        {testing ? "Sending…" : "Send test"}
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Remove channel"
-        onClick={() => onDelete(channel.id)}
-      >
-        <TrashIcon className="size-4" />
-      </Button>
+      {canManage ? (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={testing}
+            onClick={() => onTest(channel)}
+          >
+            <PaperPlaneTiltIcon className="size-3.5" />
+            {testing ? "Sending…" : "Send test"}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Remove channel"
+            onClick={() => onDelete(channel.id)}
+          >
+            <TrashIcon className="size-4" />
+          </Button>
+        </>
+      ) : null}
     </li>
   );
 }

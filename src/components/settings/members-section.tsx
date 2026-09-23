@@ -5,7 +5,10 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { CopyIcon, TrashIcon, WarningIcon } from "@phosphor-icons/react";
 import { authClient } from "@/lib/auth/client";
+import { can, hasRole, toMemberRole } from "@/lib/auth/roles";
+import { readJson } from "@/components/api-client";
 import { SectionHeading } from "@/components/layout/page";
+import { PermissionHint } from "@/components/layout/permission-hint";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,7 +123,7 @@ export function MembersSection() {
     const res = await fetch(`/api/members?memberId=${memberId}`, {
       method: "DELETE",
     });
-    const json = (await res.json()) as { error?: string };
+    const json = await readJson(res);
     if (!res.ok) {
       toast.error(json.error || "Could not remove this member");
       return;
@@ -150,7 +153,15 @@ export function MembersSection() {
     data.seats.included === null
       ? null
       : Math.max(0, data.seats.included - data.seats.used);
-  const canManage = data.yourRole === "owner" || data.yourRole === "admin";
+  // The same table the server enforces with, so a role added to ROLE_FOR
+  // later cannot leave this screen offering what the API will refuse.
+  const yourRole = toMemberRole(data.yourRole);
+  const canManage = can(yourRole, "manageMembers");
+  /** Admins manage the team; only an owner may remove another owner. */
+  const canRemove = (member: Member) =>
+    canManage &&
+    !member.isYou &&
+    (toMemberRole(member.role) !== "owner" || hasRole(yourRole, "owner"));
   const seatsFull = seatsLeft !== null && seatsLeft <= 0;
 
   return (
@@ -185,7 +196,7 @@ export function MembersSection() {
                 </p>
               </div>
               <Badge variant="outline">{member.role}</Badge>
-              {canManage && !member.isYou ? (
+              {canRemove(member) ? (
                 <Button
                   type="button"
                   variant="ghost"
@@ -199,6 +210,11 @@ export function MembersSection() {
             </li>
           ))}
         </ul>
+        {!canManage ? (
+          <PermissionHint permission="manageMembers">
+            invite or remove people
+          </PermissionHint>
+        ) : null}
       </section>
 
       {data.invitations.length > 0 ? (

@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { CopyIcon, ProhibitIcon, WarningIcon } from "@phosphor-icons/react";
+import { readJson } from "@/components/api-client";
 import { SectionHeading } from "@/components/layout/page";
+import { PermissionHint } from "@/components/layout/permission-hint";
+import { useCan } from "@/components/providers/role-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +46,9 @@ export function McpSection() {
   const [scope, setScope] = useState<"read" | "write">("read");
   const [creating, setCreating] = useState(false);
   const [freshToken, setFreshToken] = useState<string | null>(null);
+  // Members can see which tokens exist — they may be asked to use one — but
+  // minting or revoking a credential for the whole organization is an admin's.
+  const canManage = useCan("manageTokens");
 
   const load = useCallback(async () => {
     try {
@@ -67,7 +73,7 @@ export function McpSection() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: name.trim(), scope }),
     });
-    const json = (await res.json()) as { token?: string; error?: string };
+    const json = await readJson<{ token: string }>(res);
     setCreating(false);
 
     if (!res.ok || !json.token) {
@@ -83,7 +89,7 @@ export function McpSection() {
   async function revoke(id: string) {
     const res = await fetch(`/api/tokens?id=${id}`, { method: "DELETE" });
     if (!res.ok) {
-      toast.error("Could not revoke the token");
+      toast.error((await readJson(res)).error || "Could not revoke the token");
       return;
     }
     toast.success("Token revoked");
@@ -183,7 +189,16 @@ export function McpSection() {
         </section>
       ) : null}
 
-      {data.canUseMcp ? (
+      {data.canUseMcp && !canManage ? (
+        <section className="space-y-3 border-t border-border pt-6">
+          <SectionHeading title="New token" />
+          <PermissionHint permission="manageTokens">
+            create or revoke MCP tokens
+          </PermissionHint>
+        </section>
+      ) : null}
+
+      {data.canUseMcp && canManage ? (
         <section className="space-y-3 border-t border-border pt-6">
           <SectionHeading title="New token" />
           <form onSubmit={create} className="flex flex-wrap items-end gap-2">
@@ -255,15 +270,17 @@ export function McpSection() {
                 <Badge variant={token.scope === "write" ? "warning" : "outline"}>
                   {token.scope}
                 </Badge>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Revoke ${token.name}`}
-                  onClick={() => revoke(token.id)}
-                >
-                  <ProhibitIcon className="size-4" />
-                </Button>
+                {canManage ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Revoke ${token.name}`}
+                    onClick={() => revoke(token.id)}
+                  >
+                    <ProhibitIcon className="size-4" />
+                  </Button>
+                ) : null}
               </li>
             ))}
           </ul>
