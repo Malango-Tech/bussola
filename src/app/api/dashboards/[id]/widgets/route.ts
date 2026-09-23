@@ -23,25 +23,33 @@ const addSchema = z.object({
  *
  * The tenant check is what stops a widget id from one organization being
  * pointed at another's Stripe account: `repos.connections.get` is already
- * organization-filtered, so a foreign id simply resolves to nothing. The
- * provider check stops a Railway widget being pointed at a Qonto connection,
- * which would render an empty box rather than an error.
+ * organization-filtered, so a foreign id simply resolves to nothing — and is
+ * answered 404, exactly like an id that never existed, so the response says
+ * nothing about another tenant. The provider check stops a Railway widget
+ * being pointed at a Qonto connection, which would render an empty box rather
+ * than an error.
  */
 async function resolveConnection(
   repos: TenantRepos,
   widgetType: string,
   connectionId: string | null | undefined,
-): Promise<{ ok: true; value: string | null } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; value: string | null }
+  | { ok: false; error: string; status: number }
+> {
   if (connectionId == null) return { ok: true, value: null };
 
   const connection = await repos.connections.get(connectionId);
-  if (!connection) return { ok: false, error: "Connection not found" };
+  if (!connection) {
+    return { ok: false, error: "Connection not found", status: 404 };
+  }
 
   const def = getWidgetDefinition(widgetType);
   if (def && def.provider !== "multi" && def.provider !== connection.provider) {
     return {
       ok: false,
       error: `This widget reads ${def.provider}, not ${connection.provider}.`,
+      status: 400,
     };
   }
 
@@ -74,7 +82,7 @@ export async function POST(request: Request, { params }: Params) {
       def.type,
       parsed.data.connectionId,
     );
-    if (!connection.ok) return jsonError(connection.error);
+    if (!connection.ok) return jsonError(connection.error, connection.status);
 
     /*
      * A cross-source widget is created with its connection set written out.
@@ -183,7 +191,7 @@ export async function PATCH(request: Request, { params }: Params) {
         existing.widgetType,
         parsed.data.connectionId,
       );
-      if (!connection.ok) return jsonError(connection.error);
+      if (!connection.ok) return jsonError(connection.error, connection.status);
       patch.connectionId = connection.value;
     }
 
