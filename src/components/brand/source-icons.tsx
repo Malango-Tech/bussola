@@ -9,6 +9,12 @@ type SourceIconProps = {
    * Default true = brand asset matched to the current color scheme.
    */
   branded?: boolean;
+  /**
+   * Hide the icon from assistive technology. For an icon sitting next to the
+   * provider's name in text, where announcing it again only says "Stripe,
+   * Stripe".
+   */
+  decorative?: boolean;
 };
 
 type SourceMeta = {
@@ -121,24 +127,32 @@ export function getSourceMeta(provider: string): SourceMeta {
   return ICONS[provider] || FALLBACK_MULTI;
 }
 
+/** An accessible name, or nothing at all when the icon is decorative. */
+function imageRole(title: string, decorative: boolean) {
+  return decorative
+    ? ({ "aria-hidden": true } as const)
+    : ({ role: "img", "aria-label": title } as const);
+}
+
 function FallbackIcon({
   meta,
   className,
   branded,
+  decorative,
 }: {
   meta: SourceMeta;
   className?: string;
   branded: boolean;
+  decorative: boolean;
 }) {
   return (
     <svg
-      role="img"
+      {...imageRole(meta.title, decorative)}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
       className={cn("size-4 shrink-0", className)}
-      aria-label={meta.title}
     >
-      <title>{meta.title}</title>
+      {decorative ? null : <title>{meta.title}</title>}
       <path
         d={meta.path}
         fill={branded && meta.hex ? `#${meta.hex}` : "currentColor"}
@@ -151,12 +165,18 @@ export function SourceIcon({
   provider,
   className,
   branded = true,
+  decorative = false,
 }: SourceIconProps) {
   const meta = getSourceMeta(provider);
 
   if (!meta.onLight || !meta.onDark) {
     return (
-      <FallbackIcon meta={meta} className={className} branded={branded} />
+      <FallbackIcon
+        meta={meta}
+        className={className}
+        branded={branded}
+        decorative={decorative}
+      />
     );
   }
 
@@ -167,8 +187,7 @@ export function SourceIcon({
   return (
     <span
       className={cn("relative inline-flex size-4 shrink-0", className)}
-      role="img"
-      aria-label={meta.title}
+      {...imageRole(meta.title, decorative)}
     >
       <img
         src={lightSrc}

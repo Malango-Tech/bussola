@@ -107,20 +107,26 @@ export function GettingStarted({ state }: { state: SetupState }) {
   const progress = Math.round((done / steps.length) * 100);
 
   return (
-    <div className="fixed right-4 bottom-4 z-40 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+    <section
+      aria-labelledby="getting-started-title"
+      className="fixed right-4 bottom-4 z-40 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-card shadow-lg">
       <button
         type="button"
         onClick={toggleCollapsed}
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
         aria-expanded={!collapsed}
+        aria-controls="getting-started-steps"
       >
         <div className="min-w-0">
-          <p className="text-sm font-medium">Get set up</p>
+          <p id="getting-started-title" className="text-sm font-medium">
+            Get set up
+          </p>
           <p className="text-xs text-muted-foreground">
             {done} of {steps.length} done
           </p>
         </div>
         <CaretDownIcon
+          aria-hidden
           className={cn(
             "size-4 shrink-0 text-muted-foreground transition-transform",
             collapsed && "-rotate-90",
@@ -128,7 +134,15 @@ export function GettingStarted({ state }: { state: SetupState }) {
         />
       </button>
 
-      <div className="h-1 w-full bg-muted">
+      <div
+        role="progressbar"
+        aria-label="Setup progress"
+        aria-valuemin={0}
+        aria-valuemax={steps.length}
+        aria-valuenow={done}
+        aria-valuetext={`${done} of ${steps.length} steps done`}
+        className="h-1 w-full bg-muted"
+      >
         <div
           className="h-full bg-primary transition-[width] duration-300"
           style={{ width: `${progress}%` }}
@@ -136,7 +150,9 @@ export function GettingStarted({ state }: { state: SetupState }) {
       </div>
 
       {!collapsed ? (
-        <ol className="max-h-80 space-y-1 overflow-y-auto p-2">
+        <ol
+          id="getting-started-steps"
+          className="max-h-80 space-y-1 overflow-y-auto p-2">
           {steps.map((step) => (
             <li key={step.title}>
               <Link
@@ -146,10 +162,14 @@ export function GettingStarted({ state }: { state: SetupState }) {
                 {step.done ? (
                   <CheckCircleIcon
                     weight="fill"
+                    aria-hidden
                     className="mt-0.5 size-5 shrink-0 text-success"
                   />
                 ) : (
-                  <CircleDashedIcon className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+                  <CircleDashedIcon
+                    aria-hidden
+                    className="mt-0.5 size-5 shrink-0 text-muted-foreground"
+                  />
                 )}
                 <div className="min-w-0 flex-1">
                   <p
@@ -159,6 +179,8 @@ export function GettingStarted({ state }: { state: SetupState }) {
                     )}
                   >
                     {step.title}
+                    {/* The strike-through is the only other sign of it. */}
+                    {step.done ? <span className="sr-only"> (done)</span> : null}
                   </p>
                   {!step.done ? (
                     <p className="text-sm text-muted-foreground">
@@ -171,6 +193,6 @@ export function GettingStarted({ state }: { state: SetupState }) {
           ))}
         </ol>
       ) : null}
-    </div>
+    </section>
   );
 }

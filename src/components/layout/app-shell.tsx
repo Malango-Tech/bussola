@@ -151,6 +151,7 @@ function AppShellBody({
     <>
       <div className="flex min-h-screen bg-background">
         <aside
+          aria-label="Sidebar"
           className={cn(
             "sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar py-4",
             "transition-[width] duration-100 ease-out motion-reduce:transition-none",
@@ -208,7 +209,7 @@ function AppShellBody({
             </Tooltip>
           </div>
 
-          <nav className="flex flex-1 flex-col gap-1">
+          <nav aria-label="Main" className="flex flex-1 flex-col gap-1">
             {NAV.map((item) => {
               const active =
                 pathname === item.href ||
@@ -232,6 +233,12 @@ function AppShellBody({
                 item.href === "/alerts" && unacknowledgedAlerts > 0
                   ? unacknowledgedAlerts
                   : 0;
+
+              // Spoken in place of the visible label, so the count a sighted
+              // person sees on the item is not lost to a screen reader.
+              const accessibleName = badge
+                ? `${item.label}, ${badge} unacknowledged`
+                : item.label;
 
               const content = (
                 <>
@@ -263,11 +270,8 @@ function AppShellBody({
                   key={item.href}
                   href={item.href}
                   className={className}
-                  aria-label={
-                    badge
-                      ? `${item.label}, ${badge} unacknowledged`
-                      : item.label
-                  }
+                  aria-label={accessibleName}
+                  aria-current={active ? "page" : undefined}
                 >
                   {content}
                 </Link>
@@ -278,7 +282,8 @@ function AppShellBody({
                       <Link
                         href={item.href}
                         className={className}
-                        aria-label={item.label}
+                        aria-label={accessibleName}
+                        aria-current={active ? "page" : undefined}
                       />
                     }
                   >
@@ -308,10 +313,14 @@ function AppShellBody({
                                   : "text-muted-foreground hover:bg-sidebar-accent/70 hover:text-foreground",
                               )}
                             >
-                              <ArrowElbowDownRightIcon className="size-3 shrink-0" />
+                              <ArrowElbowDownRightIcon
+                                className="size-3 shrink-0"
+                                aria-hidden
+                              />
                               <Link
                                 href={`/dashboards/${dashboard.id}`}
                                 className="min-w-0 flex-1 truncate"
+                                aria-current={subActive ? "page" : undefined}
                               >
                                 {dashboard.name}
                               </Link>

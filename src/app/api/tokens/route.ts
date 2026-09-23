@@ -5,6 +5,14 @@ import { mintToken } from "@/lib/sharing/tokens";
 
 export const runtime = "nodejs";
 
+/**
+ * The fields a token row may show, picked rather than spread.
+ *
+ * `apiTokens.create` returns the whole row, hash included; spreading it here
+ * once sent that hash back to the browser on every mint. Naming the fields
+ * means a column added later stays server-side until someone decides
+ * otherwise.
+ */
 function toDto(row: {
   id: string;
   name: string;
@@ -15,7 +23,16 @@ function toDto(row: {
   lastUsedAt: Date | null;
   createdAt: Date;
 }) {
-  return { ...row };
+  return {
+    id: row.id,
+    name: row.name,
+    tokenPrefix: row.tokenPrefix,
+    scope: row.scope,
+    expiresAt: row.expiresAt,
+    revokedAt: row.revokedAt,
+    lastUsedAt: row.lastUsedAt,
+    createdAt: row.createdAt,
+  };
 }
 
 export async function GET() {

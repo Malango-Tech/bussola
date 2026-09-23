@@ -123,7 +123,11 @@ export function SignupForm({
           required
         />
       </div>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
       <Button type="submit" className="w-full" disabled={loading}>
         {loading
           ? "Creating account…"

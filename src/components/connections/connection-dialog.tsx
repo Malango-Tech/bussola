@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { toast } from "sonner";
+import { readJson } from "@/components/api-client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,6 +17,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PROVIDER_CATALOG } from "@/lib/connectors/catalog";
 import type { Provider } from "@/lib/providers";
+
+/** What the person types; only the fields this provider uses are shown. */
+type Credentials = {
+  apiKey: string;
+  login: string;
+  secretKey: string;
+  orgSlug: string;
+};
+
+const EMPTY_CREDENTIALS: Credentials = {
+  apiKey: "",
+  login: "",
+  secretKey: "",
+  orgSlug: "",
+};
 
 type Props = {
   provider: Provider;
@@ -43,11 +59,17 @@ export function ConnectionDialog({
 }: Props) {
   const entry = PROVIDER_CATALOG[provider];
   const [label, setLabel] = useState(currentLabel ?? entry.name);
-  const [apiKey, setApiKey] = useState("");
-  const [login, setLogin] = useState("");
-  const [secretKey, setSecretKey] = useState("");
-  const [orgSlug, setOrgSlug] = useState("");
+  const [credentials, setCredentials] = useState(EMPTY_CREDENTIALS);
   const [saving, setSaving] = useState(false);
+  const { apiKey, login, secretKey, orgSlug } = credentials;
+
+  /** An onChange for one credential field. */
+  const field =
+    (name: keyof Credentials) =>
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setCredentials((prev) => ({ ...prev, [name]: value }));
+    };
 
   const isEdit = Boolean(connectionId);
   const canSubmit = apiKey.trim().length > 0 || secretKey.trim().length > 0;
@@ -71,10 +93,9 @@ export function ConnectionDialog({
           test: true,
         }),
       });
-      const data = (await res.json()) as {
-        error?: string;
-        testResult?: { ok: boolean; message: string };
-      };
+      const data = await readJson<{
+        testResult: { ok: boolean; message: string } | null;
+      }>(res);
 
       if (!res.ok) {
         toast.error(data.error || "Could not save the connection");
@@ -108,9 +129,9 @@ export function ConnectionDialog({
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="label">Name</Label>
+            <Label htmlFor="connection-label">Name</Label>
             <Input
-              id="label"
+              id="connection-label"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder={entry.name}
@@ -119,14 +140,14 @@ export function ConnectionDialog({
 
           {entry.fields.includes("apiKey") ? (
             <div className="space-y-2">
-              <Label htmlFor="apiKey">
+              <Label htmlFor="connection-api-key">
                 {provider === "qonto" ? "API key (login:secret)" : "API token"}
               </Label>
               <Input
-                id="apiKey"
+                id="connection-api-key"
                 type="password"
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                onChange={field("apiKey")}
                 autoComplete="off"
                 autoFocus
                 placeholder={isEdit ? "Enter a new token to replace the stored one" : undefined}
@@ -136,13 +157,13 @@ export function ConnectionDialog({
 
           {entry.fields.includes("orgSlug") ? (
             <div className="space-y-2">
-              <Label htmlFor="orgSlug">
+              <Label htmlFor="connection-org-slug">
                 {entry.orgSlugLabel || "Organization"}
               </Label>
               <Input
-                id="orgSlug"
+                id="connection-org-slug"
                 value={orgSlug}
-                onChange={(e) => setOrgSlug(e.target.value)}
+                onChange={field("orgSlug")}
                 autoComplete="off"
               />
             </div>
@@ -151,21 +172,21 @@ export function ConnectionDialog({
           {entry.fields.includes("login") ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="login">Or login</Label>
+                <Label htmlFor="connection-login">Or login</Label>
                 <Input
-                  id="login"
+                  id="connection-login"
                   value={login}
-                  onChange={(e) => setLogin(e.target.value)}
+                  onChange={field("login")}
                   autoComplete="off"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="secretKey">Secret key</Label>
+                <Label htmlFor="connection-secret-key">Secret key</Label>
                 <Input
-                  id="secretKey"
+                  id="connection-secret-key"
                   type="password"
                   value={secretKey}
-                  onChange={(e) => setSecretKey(e.target.value)}
+                  onChange={field("secretKey")}
                   autoComplete="off"
                 />
               </div>
@@ -184,7 +205,8 @@ export function ConnectionDialog({
                   className="inline-flex items-center gap-1 text-foreground underline-offset-4 hover:underline"
                 >
                   Open {entry.name}
-                  <ArrowSquareOutIcon className="size-3" />
+                  <ArrowSquareOutIcon className="size-3" aria-hidden />
+                  <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </>
             ) : null}
