@@ -300,8 +300,9 @@ async function fetchEmails(key: string): Promise<ResendEmailItem[]> {
   }));
 }
 
-export const resendConnector: Connector = {
+export const resendConnector: Connector<ResendDashboard, "resend"> = {
   provider: "resend",
+  fetchDashboard: fetchResendDashboard,
   async test(credentials: ConnectionCredentials): Promise<TestResult> {
     const key = credentials.apiKey?.trim();
     if (!key) return { ok: false, message: "API key is required" };

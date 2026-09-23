@@ -91,8 +91,9 @@ function branch(deployment: VercelDeployment): string | undefined {
   );
 }
 
-export const vercelConnector: Connector = {
+export const vercelConnector: Connector<VercelDashboard, "vercel"> = {
   provider: "vercel",
+  fetchDashboard: fetchVercelDashboard,
   async test(credentials: ConnectionCredentials): Promise<TestResult> {
     const token = credentials.apiKey?.trim();
     if (!token) return { ok: false, message: "API token is required" };

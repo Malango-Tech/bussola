@@ -206,8 +206,10 @@ async function fetchAccountBuildMinutes(
   }
 }
 
-export const netlifyConnector: Connector = {
+export const netlifyConnector: Connector<NetlifyDashboard, "netlify"> = {
   provider: "netlify",
+  fetchDashboard: (credentials) =>
+    fetchNetlifyDashboard(credentials.apiKey || ""),
   async test(credentials: ConnectionCredentials): Promise<TestResult> {
     const token = credentials.apiKey?.trim();
     if (!token) {

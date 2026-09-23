@@ -342,8 +342,9 @@ function buildBalanceHistory(
   };
 }
 
-export const qontoConnector: Connector = {
+export const qontoConnector: Connector<QontoDashboard, "qonto"> = {
   provider: "qonto",
+  fetchDashboard: fetchQontoDashboard,
   async test(credentials: ConnectionCredentials): Promise<TestResult> {
     try {
       const data = await qontoFetch<QontoOrg>(credentials, "/organization");

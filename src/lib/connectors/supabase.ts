@@ -329,8 +329,13 @@ function normalizeServices(
     .filter((s) => Boolean(s.serviceName));
 }
 
-export const supabaseConnector: Connector = {
+export const supabaseConnector: Connector<
+  SupabaseDashboard,
+  "supabase"
+> = {
   provider: "supabase",
+  fetchDashboard: (credentials) =>
+    fetchSupabaseDashboard(credentials.apiKey || ""),
   async test(credentials: ConnectionCredentials): Promise<TestResult> {
     const token = normalizeSupabaseToken(credentials.apiKey || "");
     const validationError = validateSupabaseToken(token);

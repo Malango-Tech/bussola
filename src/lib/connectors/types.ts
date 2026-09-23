@@ -329,9 +329,46 @@ export type NetlifyDashboard = {
   formSubmissionsTotal: number;
 };
 
-export interface Connector {
-  provider: Provider;
+/**
+ * The providers with a live connector: the ones a user can connect and the
+ * sync worker schedules. `CONNECTORS` in `./index` holds one for each.
+ */
+export type SyncableProvider =
+  | "railway"
+  | "vercel"
+  | "netlify"
+  | "supabase"
+  | "sentry"
+  | "stripe"
+  | "lemonsqueezy"
+  | "resend"
+  | "qonto";
+
+/**
+ * Everything the app needs from one data source, in one place.
+ *
+ * Adding a provider means writing one of these and registering it in
+ * `CONNECTORS`; the connection test, the sync worker and the registry tests
+ * all read from there rather than from a list of their own.
+ */
+export interface Connector<
+  TDashboard = unknown,
+  P extends Provider = Provider,
+> {
+  provider: P;
+  /**
+   * Check the credentials with the cheapest authenticated call. Never throws:
+   * a failure comes back as `ok: false` with a user-facing message.
+   */
   test(credentials: ConnectionCredentials): Promise<TestResult>;
+  /**
+   * The dashboard snapshot the sync worker stores and the widgets read.
+   *
+   * Throws when the snapshot as a whole cannot be built (bad token, provider
+   * down); the worker records that through `toUserFacingError`. A failing
+   * sub-request degrades its own section instead of throwing.
+   */
+  fetchDashboard(credentials: ConnectionCredentials): Promise<TDashboard>;
 }
 
 /* ─────────────────────────────── Stripe ─────────────────────────────────── */

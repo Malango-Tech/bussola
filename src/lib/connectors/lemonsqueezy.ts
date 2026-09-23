@@ -117,8 +117,12 @@ function summarise(
   };
 }
 
-export const lemonsqueezyConnector: Connector = {
+export const lemonsqueezyConnector: Connector<
+  LemonSqueezyDashboard,
+  "lemonsqueezy"
+> = {
   provider: "lemonsqueezy",
+  fetchDashboard: fetchLemonSqueezyDashboard,
   async test(credentials: ConnectionCredentials): Promise<TestResult> {
     const key = credentials.apiKey?.trim();
     if (!key) return { ok: false, message: "API key is required" };

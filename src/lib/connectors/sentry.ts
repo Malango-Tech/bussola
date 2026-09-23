@@ -98,8 +98,9 @@ async function resolveOrganization(
   return first;
 }
 
-export const sentryConnector: Connector = {
+export const sentryConnector: Connector<SentryDashboard, "sentry"> = {
   provider: "sentry",
+  fetchDashboard: fetchSentryDashboard,
   async test(credentials: ConnectionCredentials): Promise<TestResult> {
     const token = credentials.apiKey?.trim();
     if (!token) return { ok: false, message: "API token is required" };

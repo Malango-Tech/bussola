@@ -1,6 +1,12 @@
-import type { ConnectionCredentials, Connector, TestResult } from "../types";
+import type {
+  ConnectionCredentials,
+  Connector,
+  RailwayDashboard,
+  TestResult,
+} from "../types";
 import { toUserFacingError } from "../errors";
 import { resolveRailwayAuth } from "./client";
+import { fetchRailwayDashboard } from "./dashboard";
 
 /**
  * Railway: services, deploys, metrics and billing over its GraphQL API.
@@ -21,8 +27,10 @@ import { resolveRailwayAuth } from "./client";
 export { deployStage, rawStatusLabel, statusColor } from "./status";
 export { fetchRailwayDashboard } from "./dashboard";
 
-export const railwayConnector: Connector = {
+export const railwayConnector: Connector<RailwayDashboard, "railway"> = {
   provider: "railway",
+  fetchDashboard: (credentials) =>
+    fetchRailwayDashboard(credentials.apiKey || ""),
   async test(credentials: ConnectionCredentials): Promise<TestResult> {
     const token = credentials.apiKey?.trim();
     if (!token) {

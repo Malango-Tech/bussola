@@ -150,8 +150,9 @@ async function fetchSubscriptions(key: string): Promise<RevenueSummary> {
   };
 }
 
-export const stripeConnector: Connector = {
+export const stripeConnector: Connector<StripeDashboard, "stripe"> = {
   provider: "stripe",
+  fetchDashboard: fetchStripeDashboard,
   async test(credentials: ConnectionCredentials): Promise<TestResult> {
     const key = credentials.apiKey?.trim();
     if (!key) return { ok: false, message: "API key is required" };
