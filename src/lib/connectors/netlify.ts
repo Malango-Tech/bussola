@@ -12,12 +12,15 @@ import type {
 import { toUserFacingError } from "./errors";
 import { fetchJson } from "./http";
 import { byNewest, byOldest } from "./shared/dates";
+import { connectorLogger, describeError } from "./shared/log";
 import { toneClass } from "./shared/tone";
 
 const BASE = "https://api.netlify.com/api/v1";
 const MAX_SITES = 20;
 const DEPLOYS_PER_SITE = 24;
 const RECENT_DEPLOYS = 25;
+
+const log = connectorLogger("netlify");
 
 async function netlifyFetch<T>(token: string, path: string): Promise<T> {
   return fetchJson<T>(
@@ -192,7 +195,13 @@ async function fetchAccountBuildMinutes(
           ? `${status.active ?? 0} building · ${status.enqueued ?? 0} queued`
           : "Current billing period",
     };
-  } catch {
+  } catch (error) {
+    // Build status is account-level and not every token can read it; the
+    // card renders its empty state.
+    log.debug("build minutes unavailable", {
+      accountId,
+      reason: describeError(error),
+    });
     return null;
   }
 }
@@ -243,7 +252,9 @@ export async function fetchNetlifyDashboard(
         token,
         `/sites/${site.id}/deploys?per_page=${DEPLOYS_PER_SITE}`,
       );
-    } catch {
+    } catch (error) {
+      // The site still shows, trail reduced to its published deploy.
+      log.warn("site deploys unavailable", { siteId: site.id }, error);
       deploys = [];
     }
 
@@ -288,8 +299,12 @@ export async function fetchNetlifyDashboard(
           submissionCount: form.submission_count || 0,
         });
       }
-    } catch {
-      // forms optional
+    } catch (error) {
+      // Forms are an extra; the site's row stands without them.
+      log.debug("site forms unavailable", {
+        siteId: site.id,
+        reason: describeError(error),
+      });
     }
   }
 
@@ -314,7 +329,9 @@ export async function fetchNetlifyDashboard(
     if (accountId) {
       buildMinutes = await fetchAccountBuildMinutes(token, accountId);
     }
-  } catch {
+  } catch (error) {
+    // Fall back to the account a site names, which is usually the same one.
+    log.debug("account list unavailable", { reason: describeError(error) });
     if (accountHint) {
       buildMinutes = await fetchAccountBuildMinutes(token, accountHint);
     }

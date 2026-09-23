@@ -1,4 +1,5 @@
 import { fetchJson } from "../http";
+import { connectorLogger, describeError } from "../shared/log";
 
 /**
  * Railway's GraphQL client and token-kind detection.
@@ -9,6 +10,8 @@ import { fetchJson } from "../http";
  */
 
 const ENDPOINT = "https://backboard.railway.com/graphql/v2";
+
+const log = connectorLogger("railway");
 
 export type AuthMode = "account" | "project";
 
@@ -55,12 +58,10 @@ export async function railwayGraphql<T>(
   }
 
   if (json.errors?.length) {
-    const paths = json.errors
-      .map((e) => (e.path?.length ? e.path.join(".") : "?"))
-      .join(", ");
-    console.warn(
-      `[railway] partial response (${paths}): ${json.errors[0]?.message}`,
-    );
+    log.warn("partial GraphQL response", {
+      paths: json.errors.map((e) => (e.path?.length ? e.path.join(".") : "?")),
+      reason: json.errors[0]?.message,
+    });
   }
 
   return json.data;
@@ -101,8 +102,12 @@ export async function resolveRailwayAuth(token: string): Promise<RailwayAuth> {
         { id: projectAuth.projectToken.projectId },
       );
       if (project.project.name) label = project.project.name;
-    } catch {
-      // optional
+    } catch (error) {
+      // The name only labels the connection; the token itself is proven good.
+      log.debug("project name lookup failed", {
+        projectId: projectAuth.projectToken.projectId,
+        reason: describeError(error),
+      });
     }
 
     return {
@@ -111,8 +116,9 @@ export async function resolveRailwayAuth(token: string): Promise<RailwayAuth> {
       environmentId: projectAuth.projectToken.environmentId,
       label,
     };
-  } catch {
-    // Fall through to Bearer account token.
+  } catch (error) {
+    // Expected for every account and workspace token; fall through to Bearer.
+    log.debug("not a project token", { reason: describeError(error) });
   }
 
   // Workspace API token: no user behind it, but it names the workspaces it can
@@ -130,8 +136,9 @@ export async function resolveRailwayAuth(token: string): Promise<RailwayAuth> {
         label: workspace.name || "Railway workspace",
       };
     }
-  } catch {
-    // Not a workspace token; try a personal one.
+  } catch (error) {
+    // Expected for a personal token; try `me` next.
+    log.debug("not a workspace token", { reason: describeError(error) });
   }
 
   const account = await railwayGraphql<{

@@ -14,6 +14,7 @@ import type {
 import { toUserFacingError } from "./errors";
 import { fetchJson } from "./http";
 import { byNewest, daysAgo } from "./shared/dates";
+import { connectorLogger } from "./shared/log";
 import { majorOrMinor } from "./shared/money";
 import { collectPages } from "./shared/pagination";
 
@@ -22,6 +23,8 @@ const TX_PER_PAGE = 100;
 const TX_MAX_PAGES = 5;
 const CASHFLOW_DAYS = 30;
 const FEED_FETCH_MULTIPLIER = 2;
+
+const log = connectorLogger("qonto");
 
 function authHeader(credentials: ConnectionCredentials): string {
   // Qonto API key auth is NOT HTTP Basic: send the raw `login:secret` string.
@@ -376,7 +379,14 @@ export async function fetchQontoDashboard(
           account.id,
           settledFrom,
         );
-      } catch {
+      } catch (error) {
+        // The balance still renders, but this account's cashflow and history
+        // now count as zero — a number that looks real, so leave a trace.
+        log.warn(
+          "account transactions unavailable",
+          { accountId: account.id },
+          error,
+        );
         return { transactions: [] as QontoTxRaw[], truncated: false };
       }
     }),
@@ -466,7 +476,13 @@ export async function fetchQontoTransactionsPage(
           limit: fetchLimit,
           settledTo: decoded?.settledAt,
         });
-      } catch {
+      } catch (error) {
+        // The feed carries on with the other accounts.
+        log.warn(
+          "account transaction page unavailable",
+          { accountId: account.id },
+          error,
+        );
         return { transactions: [] as QontoTxRaw[], exhausted: true };
       }
     }),

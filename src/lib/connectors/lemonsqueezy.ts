@@ -9,6 +9,7 @@ import type {
 import { toUserFacingError } from "./errors";
 import { fetchJson } from "./http";
 import { daysAgo } from "./shared/dates";
+import { connectorLogger } from "./shared/log";
 import { toMajor } from "./shared/money";
 import { collectPages } from "./shared/pagination";
 
@@ -16,6 +17,8 @@ const BASE = "https://api.lemonsqueezy.com/v1";
 const RECENT_ORDERS = 25;
 const SUBSCRIPTION_PAGES = 5;
 const PER_PAGE = 100;
+
+const log = connectorLogger("lemonsqueezy");
 
 async function lsFetch<T>(key: string, path: string): Promise<T> {
   return fetchJson<T>(
@@ -172,7 +175,11 @@ export async function fetchLemonSqueezyDashboard(
   const invoices = await lsFetch<JsonApiList<SubscriptionInvoiceAttributes>>(
     key,
     `/subscription-invoices?page[size]=${PER_PAGE}&filter[status]=paid`,
-  ).catch(() => null);
+  ).catch((error: unknown) => {
+    // MRR then reads as zero, which looks like a real figure — so say why.
+    log.warn("subscription invoices unavailable; MRR shown as 0", {}, error);
+    return null;
+  });
 
   if (invoices) {
     const monthAgo = daysAgo(30).getTime();

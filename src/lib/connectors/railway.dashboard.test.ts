@@ -380,6 +380,48 @@ describe("fetchRailwayDashboard — partial failures", () => {
   });
 });
 
+describe("fetchRailwayDashboard — fallback logging", () => {
+  afterEach(() => {
+    delete process.env.BUSSOLA_LOG_LEVEL;
+  });
+
+  it("leaves a warning when a section goes blank", async () => {
+    mockFetch(accountRoutes({ metricsSeries: fail(502, "Bad Gateway") }));
+    await fetchRailwayDashboard("acct-token");
+
+    expect(console.warn).toHaveBeenCalledWith(
+      '[connector:railway] metric series unavailable {"environmentId":"env_prod"}',
+      expect.objectContaining({ message: "Railway API 502: Bad Gateway" }),
+    );
+  });
+
+  it("never writes the token, even at debug level", async () => {
+    process.env.BUSSOLA_LOG_LEVEL = "debug";
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const secret = "rw_secret_7f3a9c";
+    mockFetch(
+      accountRoutes({
+        metricsGrouped: fail(400),
+        metricsAggregate: fail(500),
+        metricsSeries: fail(502),
+        usage: fail(403),
+        billingMe: fail(500),
+      }),
+    );
+    await fetchRailwayDashboard(secret);
+
+    const written = [...logSpy.mock.calls, ...vi.mocked(console.warn).mock.calls]
+      .map((args) =>
+        args.map((a) => (a instanceof Error ? a.stack : String(a))).join(" "),
+      )
+      .join("\n");
+    // Debug lines for the expected probes, warnings for blanked sections.
+    expect(written).toContain("not a project token");
+    expect(written).toContain("environment metrics unavailable");
+    expect(written).not.toContain(secret);
+  });
+});
+
 describe("fetchRailwayDashboard — other token kinds", () => {
   it("scopes a project token to its one project and environment", async () => {
     const http = mockFetch(

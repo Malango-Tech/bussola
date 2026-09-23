@@ -1,4 +1,5 @@
 import type { RailwayMetricPoint, RailwayMetricSeries } from "../types";
+import { connectorLogger, describeError } from "../shared/log";
 import { railwayGraphql, type AuthMode } from "./client";
 
 /**
@@ -10,6 +11,8 @@ const METRICS_LOOKBACK_MS = 60 * 60 * 1000;
 /** Window and bucket size for the usage charts: a day at 15-minute resolution. */
 export const SERIES_HOURS = 24;
 const SERIES_SAMPLE_SECONDS = 900;
+
+const log = connectorLogger("railway");
 
 type MetricsResponse = {
   metrics: Array<{
@@ -68,8 +71,12 @@ export async function fetchEnvironmentMetrics(
       },
     );
     return latestSamples(data);
-  } catch {
+  } catch (error) {
     // Fallback without groupBy (environment aggregate).
+    log.debug("per-service metrics unavailable; using the aggregate", {
+      environmentId,
+      reason: describeError(error),
+    });
     try {
       const data = await railwayGraphql<MetricsResponse>(
         token,
@@ -95,7 +102,8 @@ export async function fetchEnvironmentMetrics(
         },
       );
       return latestSamples(data);
-    } catch {
+    } catch (error) {
+      log.warn("environment metrics unavailable", { environmentId }, error);
       return { cpu: [], memory: [] };
     }
   }

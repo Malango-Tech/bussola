@@ -67,6 +67,7 @@ function toRequest(input: RequestInfo | URL, init?: RequestInit): MockRequest {
     try {
       body = JSON.parse(init.body);
     } catch {
+      // Not JSON (a form-encoded body, say): keep it exactly as sent.
       body = init.body;
     }
   }

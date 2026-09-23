@@ -4,6 +4,7 @@ import type {
   TrackerPoint,
 } from "../types";
 import { byNewest, byOldest } from "../shared/dates";
+import { connectorLogger, describeError } from "../shared/log";
 import { toneClass } from "../shared/tone";
 import { railwayGraphql, type AuthMode } from "./client";
 import {
@@ -21,6 +22,8 @@ import {
 
 const DEPLOY_TRAIL_LEN = 24;
 const FAILED_ATTEMPTS_SHOWN = 3;
+
+const log = connectorLogger("railway");
 
 export type DeploymentNode = {
   id: string;
@@ -198,7 +201,13 @@ export async function fetchDeployments(
     });
     return data.deployments.edges.map((e) => e.node);
   } catch (error) {
-    if (opts.swallow) return [];
-    throw error;
+    if (!opts.swallow) throw error;
+    // The caller falls back to asking per service.
+    log.debug("deployment list unavailable", {
+      projectId: opts.projectId,
+      serviceId: opts.serviceId,
+      reason: describeError(error),
+    });
+    return [];
   }
 }

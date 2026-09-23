@@ -15,6 +15,9 @@ import type {
 import { toUserFacingError } from "./errors";
 import { fetchJson } from "./http";
 import { daysAgo } from "./shared/dates";
+import { connectorLogger } from "./shared/log";
+
+const log = connectorLogger("resend");
 
 const BASE = "https://api.resend.com";
 const RECENT_EMAILS = 25;
@@ -46,10 +49,7 @@ async function optional<T>(
   } catch (error) {
     // A section going quiet is a permissions or upstream problem worth being
     // able to read back; the widget only ever says "unavailable".
-    console.warn(
-      `[resend] ${section} unavailable:`,
-      error instanceof Error ? error.message : error,
-    );
+    log.warn(`${section} unavailable`, { section }, error);
     return { value: null, unavailable: true };
   }
 }

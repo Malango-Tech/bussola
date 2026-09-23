@@ -9,6 +9,7 @@ import type {
 import { toUserFacingError } from "./errors";
 import { fetchJson } from "./http";
 import { daysAgo } from "./shared/dates";
+import { connectorLogger, describeError } from "./shared/log";
 import { toMajor } from "./shared/money";
 import { collectPages } from "./shared/pagination";
 
@@ -16,6 +17,8 @@ const BASE = "https://api.stripe.com/v1";
 const SUBSCRIPTION_PAGES = 5;
 const PER_PAGE = 100;
 const RECENT_PAYMENTS = 25;
+
+const log = connectorLogger("stripe");
 
 async function stripeFetch<T>(key: string, path: string): Promise<T> {
   return fetchJson<T>(
@@ -180,7 +183,12 @@ export async function fetchStripeDashboard(
     stripeFetch<{
       available?: Array<{ amount: number; currency: string }>;
       pending?: Array<{ amount: number; currency: string }>;
-    }>(key, "/balance").catch(() => null),
+    }>(key, "/balance").catch((error: unknown) => {
+      // A restricted key can be granted charges without balance; the balance
+      // card goes empty and revenue still renders.
+      log.debug("balance unavailable", { reason: describeError(error) });
+      return null;
+    }),
   ]);
 
   const succeeded = charges.data.filter(

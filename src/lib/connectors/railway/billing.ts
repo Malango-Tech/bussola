@@ -1,6 +1,9 @@
 import type { RailwayBilling } from "../types";
+import { connectorLogger, describeError } from "../shared/log";
 import { toMajor } from "../shared/money";
 import { railwayGraphql, type AuthMode } from "./client";
+
+const log = connectorLogger("railway");
 
 /**
  * Current spend, projected bill and the cycle it belongs to.
@@ -88,7 +91,11 @@ export async function fetchBilling(
         workspace.plan,
         workspace.customer,
       );
-    } catch {
+    } catch (error) {
+      log.debug("workspace billing unavailable", {
+        workspaceId,
+        reason: describeError(error),
+      });
       return null;
     }
   }
@@ -120,8 +127,9 @@ export async function fetchBilling(
       workspace.plan,
       workspace.customer,
     );
-  } catch {
+  } catch (error) {
     // Billing visibility depends on workspace role; the rest still renders.
+    log.debug("account billing unavailable", { reason: describeError(error) });
     return null;
   }
 }

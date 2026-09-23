@@ -12,10 +12,13 @@ import type {
 } from "./types";
 import { friendlyStatusLabel, toUserFacingError } from "./errors";
 import { fetchJson } from "./http";
+import { connectorLogger, describeError } from "./shared/log";
 
 const BASE = "https://api.supabase.com/v1";
 const USAGE_INTERVAL = "7day";
 const MAX_DETAIL_PROJECTS = 8;
+
+const log = connectorLogger("supabase");
 
 /** Normalize copy-pasted tokens (Bearer prefix, quotes, whitespace). */
 export function normalizeSupabaseToken(raw: string): string {
@@ -180,7 +183,10 @@ async function fetchProjectHealth(
     if (Array.isArray(data)) return data;
     if (data && Array.isArray(data.services)) return data.services;
     return [];
-  } catch {
+  } catch (error) {
+    // The project's service rows go missing, which reads as "nothing to
+    // report" rather than "down" — worth being able to tell apart.
+    log.warn("service health unavailable", { ref }, error);
     return [];
   }
 }
@@ -211,7 +217,11 @@ async function fetchFunctionsHealth(
         ? `${throttled} of ${fns.length} throttled`
         : `${active} deployed`,
     };
-  } catch {
+  } catch (error) {
+    log.debug("edge functions unavailable", {
+      ref,
+      reason: describeError(error),
+    });
     return null;
   }
 }
@@ -226,7 +236,13 @@ async function fetchProjectUsage(
       `/projects/${encodeURIComponent(ref)}/analytics/endpoints/usage.api-counts?interval=${USAGE_INTERVAL}`,
     );
     return data.result || [];
-  } catch {
+  } catch (error) {
+    // Analytics is rate limited well below the rest of the API (see the
+    // batching in fetchSupabaseDashboard), so a miss here is routine.
+    log.debug("usage analytics unavailable", {
+      ref,
+      reason: describeError(error),
+    });
     return [];
   }
 }
@@ -251,9 +267,14 @@ async function fetchAdvisorKind(
     return lints
       .filter((lint) => !NON_FINDING_LINTS.has(lint.name || ""))
       .map((lint) => ({ ...lint, kind }));
-  } catch {
+  } catch (error) {
     // The security endpoint is flagged experimental, so one kind failing must
     // not take the other down with it.
+    log.debug("advisors unavailable", {
+      ref,
+      kind,
+      reason: describeError(error),
+    });
     return [];
   }
 }

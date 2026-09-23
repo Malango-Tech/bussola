@@ -1,7 +1,10 @@
 import type { RailwayUsageItem } from "../types";
+import { connectorLogger, describeError } from "../shared/log";
 import { railwayGraphql, type AuthMode } from "./client";
 
 /** Railway's estimate of this cycle's resource consumption, per measurement. */
+
+const log = connectorLogger("railway");
 
 /** `estimatedUsage` requires an explicit measurement list; there is no default. */
 const USAGE_MEASUREMENTS = [
@@ -80,8 +83,12 @@ export async function fetchEstimatedUsage(
         const prev = aggregates.get(row.measurement) || 0;
         aggregates.set(row.measurement, prev + (row.estimatedValue || 0));
       }
-    } catch {
-      // optional — token/plan may not expose usage
+    } catch (error) {
+      // Optional: the token or plan may not expose usage.
+      log.debug("estimated usage unavailable", {
+        projectId,
+        reason: describeError(error),
+      });
     }
   }
 

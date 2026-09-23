@@ -31,6 +31,8 @@ export async function fetchJson<T>(
   }
 
   if (!res.ok) {
+    // The body only decorates the error thrown below; a failed read must not
+    // replace the status, which is what `toUserFacingError` keys on.
     const text = await res.text().catch(() => "");
     throw new Error(`${label} API ${res.status}: ${text.slice(0, 160)}`);
   }

@@ -10,6 +10,7 @@ import type {
   TrackerPoint,
 } from "../types";
 import { byNewest } from "../shared/dates";
+import { connectorLogger } from "../shared/log";
 import { resolveRailwayAuth } from "./client";
 import { fetchBilling } from "./billing";
 import {
@@ -34,6 +35,8 @@ import {
 import { fetchEstimatedUsage } from "./usage";
 
 const RECENT_DEPLOYS = 25;
+
+const log = connectorLogger("railway");
 
 export async function fetchRailwayDashboard(
   apiKey: string,
@@ -110,8 +113,14 @@ export async function fetchRailwayDashboard(
             first: 48,
           });
           if (serviceDeploys.length > 0) deployments = serviceDeploys;
-        } catch {
-          // Keep whatever project-level list we already have.
+        } catch (error) {
+          // Keep whatever project-level list we already have — possibly
+          // nothing, which leaves this service's deploy health unknown.
+          log.warn(
+            "service deployments unavailable",
+            { projectId: project.id, serviceId: service.id },
+            error,
+          );
         }
       }
 
@@ -290,8 +299,13 @@ export async function fetchRailwayDashboard(
           series,
         };
       }
-    } catch {
+    } catch (error) {
       // Charts degrade to their empty state; the rest of the dashboard stands.
+      log.warn(
+        "metric series unavailable",
+        { environmentId: primaryEnv.id },
+        error,
+      );
     }
   }
 
