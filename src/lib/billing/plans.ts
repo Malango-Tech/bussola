@@ -1,3 +1,5 @@
+import { env, type StripePriceVariable } from "@/lib/env";
+
 /**
  * What each plan allows.
  *
@@ -48,7 +50,11 @@ export type Plan = {
   limits: PlanLimits;
   features: PlanFeatures;
   /** Env vars holding the Stripe price ids, when the plan is purchasable. */
-  prices?: { monthly: string; yearly: string; extraSeat?: string };
+  prices?: {
+    monthly: StripePriceVariable;
+    yearly: StripePriceVariable;
+    extraSeat?: StripePriceVariable;
+  };
 };
 
 export const UNLIMITED = Number.POSITIVE_INFINITY;
@@ -172,12 +178,12 @@ export function priceIdFor(
   interval: BillingInterval = "monthly",
 ): string | undefined {
   const envVar = PLANS[plan].prices?.[interval];
-  return envVar ? process.env[envVar] || undefined : undefined;
+  return envVar ? env()[envVar] : undefined;
 }
 
 export function extraSeatPriceId(plan: PlanId): string | undefined {
   const envVar = PLANS[plan].prices?.extraSeat;
-  return envVar ? process.env[envVar] || undefined : undefined;
+  return envVar ? env()[envVar] : undefined;
 }
 
 /**
@@ -188,10 +194,11 @@ export function extraSeatPriceId(plan: PlanId): string | undefined {
  */
 export function planForPriceId(priceId: string | null | undefined): PlanId {
   if (!priceId) return DEFAULT_PLAN;
+  const config = env();
   for (const plan of Object.values(PLANS)) {
     if (!plan.prices) continue;
     for (const interval of ["monthly", "yearly"] as const) {
-      if (process.env[plan.prices[interval]] === priceId) return plan.id;
+      if (config[plan.prices[interval]] === priceId) return plan.id;
     }
   }
   return DEFAULT_PLAN;

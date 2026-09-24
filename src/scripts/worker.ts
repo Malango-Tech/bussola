@@ -1,6 +1,8 @@
 import { closeDb, databaseUrl } from "../lib/db";
 import { EDITION } from "../lib/edition";
-import { TICK_INTERVAL_SECONDS } from "../lib/sync/config";
+import { env } from "../lib/env";
+import { logger } from "../lib/log";
+import { tickIntervalSeconds } from "../lib/sync/config";
 import { startScheduler } from "../lib/sync/scheduler";
 
 /**
@@ -11,8 +13,19 @@ import { startScheduler } from "../lib/sync/scheduler";
  * installs do not need it: the long-running Next server starts the same
  * scheduler in-process via instrumentation.ts.
  */
+const log = logger("worker");
+
+// Validated up front, as the app server does, so a bad variable is one clear
+// line at startup rather than a stack trace from whichever module read it.
+try {
+  env();
+} catch (error) {
+  log.error("refusing to start: invalid configuration", {}, error);
+  process.exit(1);
+}
+
 if (!databaseUrl()) {
-  console.error(
+  log.error(
     [
       "The standalone worker needs DATABASE_URL.",
       "",
@@ -26,14 +39,12 @@ if (!databaseUrl()) {
   process.exit(1);
 }
 
-console.log(
-  `Bussola sync worker · edition=${EDITION} · tick=${TICK_INTERVAL_SECONDS}s`,
-);
+log.info("started", { edition: EDITION, tickSeconds: tickIntervalSeconds() });
 
 const scheduler = startScheduler();
 
 async function shutdown(signal: string) {
-  console.log(`\n[sync] ${signal} — stopping`);
+  log.info("stopping", { signal });
   scheduler.stop();
   await closeDb();
   process.exit(0);

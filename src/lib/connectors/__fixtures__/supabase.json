@@ -1,0 +1,134 @@
+{
+  "projects": [
+    {
+      "id": "abcdefghijklmnopqrst",
+      "ref": "abcdefghijklmnopqrst",
+      "organization_id": "vercel_icfg_org",
+      "name": "shop-prod",
+      "region": "eu-central-1",
+      "created_at": "2025-11-02T10:00:00.000Z",
+      "status": "ACTIVE_HEALTHY",
+      "database": {
+        "host": "db.abcdefghijklmnopqrst.supabase.co",
+        "version": "15.8.1.054",
+        "postgres_engine": "15",
+        "release_channel": "ga"
+      }
+    },
+    {
+      "id": "zyxwvutsrqponmlkjihg",
+      "ref": "zyxwvutsrqponmlkjihg",
+      "organization_id": "vercel_icfg_org",
+      "name": "shop-staging",
+      "region": "us-east-1",
+      "created_at": "2026-01-15T08:30:00.000Z",
+      "status": "INACTIVE"
+    }
+  ],
+  "healthProd": [
+    { "name": "db", "healthy": true, "status": "ACTIVE_HEALTHY" },
+    {
+      "name": "auth",
+      "healthy": true,
+      "status": "ACTIVE_HEALTHY",
+      "info": { "name": "GoTrue", "version": "2.177.0", "description": "GoTrue is a user registration and authentication API" }
+    },
+    { "name": "rest", "healthy": true, "status": "ACTIVE_HEALTHY" },
+    { "name": "realtime", "healthy": false, "status": "UNHEALTHY", "error": "connect ECONNREFUSED" },
+    { "name": "storage", "healthy": true, "status": "COMING_UP" }
+  ],
+  "healthStaging": [
+    { "name": "db", "healthy": false, "status": "UNHEALTHY" }
+  ],
+  "functionsProd": [
+    {
+      "id": "0b1c2d3e-0000-4000-8000-000000000001",
+      "slug": "send-receipt",
+      "name": "send-receipt",
+      "status": "ACTIVE",
+      "version": 12,
+      "created_at": 1756000000000,
+      "updated_at": 1789800000000,
+      "verify_jwt": true
+    },
+    {
+      "id": "0b1c2d3e-0000-4000-8000-000000000002",
+      "slug": "stripe-webhook",
+      "name": "stripe-webhook",
+      "status": "ACTIVE",
+      "version": 4,
+      "verify_jwt": false
+    }
+  ],
+  "usageProd": {
+    "result": [
+      {
+        "timestamp": "2026-09-19T00:00:00.000Z",
+        "total_auth_requests": 120,
+        "total_realtime_requests": 30,
+        "total_rest_requests": 5400,
+        "total_storage_requests": 80
+      },
+      {
+        "timestamp": "2026-09-20T00:00:00.000Z",
+        "total_auth_requests": 200,
+        "total_realtime_requests": 10,
+        "total_rest_requests": 6100,
+        "total_storage_requests": 0
+      }
+    ]
+  },
+  "usageEmpty": { "result": [] },
+  "advisorsSecurityProd": {
+    "lints": [
+      {
+        "name": "function_search_path_mutable",
+        "title": "Function Search Path Mutable",
+        "level": "WARN",
+        "facing": "EXTERNAL",
+        "categories": ["SECURITY"],
+        "description": "Detects functions where the search_path parameter is not set.",
+        "detail": "Function `public.handle_new_user` has a role mutable search_path",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable",
+        "cache_key": "function_search_path_mutable_public_handle_new_user"
+      },
+      {
+        "name": "rls_disabled_in_public",
+        "title": "RLS Disabled in Public",
+        "level": "ERROR",
+        "facing": "EXTERNAL",
+        "categories": ["SECURITY"],
+        "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+        "detail": "Table `public.orders` is public, but RLS has not been enabled.",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+        "cache_key": "rls_disabled_in_public_public_orders"
+      }
+    ]
+  },
+  "advisorsPerformanceProd": {
+    "lints": [
+      {
+        "name": "unindexed_foreign_keys",
+        "title": "Unindexed foreign keys",
+        "level": "INFO",
+        "facing": "EXTERNAL",
+        "categories": ["PERFORMANCE"],
+        "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+        "detail": "Table `public.order_items` has a foreign key `order_items_order_id_fkey` without a covering index.",
+        "cache_key": "unindexed_foreign_keys_public_order_items"
+      }
+    ]
+  },
+  "advisorsStaging": {
+    "lints": [
+      {
+        "name": "project_not_active",
+        "title": "Project is not active",
+        "level": "INFO",
+        "description": "Advisors cannot run while the project is paused."
+      }
+    ]
+  },
+  "invalidJwt": { "message": "JWT could not be decoded" },
+  "unauthorized": { "message": "Unauthorized" }
+}

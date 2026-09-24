@@ -1,10 +1,18 @@
 import { z } from "zod";
-import { jsonError, jsonOk, withTenant } from "@/lib/api";
+import { jsonError, jsonOk, ROLE_FOR, withTenant } from "@/lib/api";
 import { entitlementsFor } from "@/lib/billing/entitlements";
 import { mintToken } from "@/lib/sharing/tokens";
 
 export const runtime = "nodejs";
 
+/**
+ * The fields a token row may show, picked rather than spread.
+ *
+ * `apiTokens.create` returns the whole row, hash included; spreading it here
+ * once sent that hash back to the browser on every mint. Naming the fields
+ * means a column added later stays server-side until someone decides
+ * otherwise.
+ */
 function toDto(row: {
   id: string;
   name: string;
@@ -15,7 +23,16 @@ function toDto(row: {
   lastUsedAt: Date | null;
   createdAt: Date;
 }) {
-  return { ...row };
+  return {
+    id: row.id,
+    name: row.name,
+    tokenPrefix: row.tokenPrefix,
+    scope: row.scope,
+    expiresAt: row.expiresAt,
+    revokedAt: row.revokedAt,
+    lastUsedAt: row.lastUsedAt,
+    createdAt: row.createdAt,
+  };
 }
 
 export async function GET() {
@@ -69,7 +86,7 @@ export async function POST(request: Request) {
       },
       { status: 201 },
     );
-  });
+  }, { role: ROLE_FOR.manageTokens });
 }
 
 export async function DELETE(request: Request) {
@@ -81,5 +98,5 @@ export async function DELETE(request: Request) {
     const revoked = await repos.apiTokens.revoke(id);
     if (!revoked) return jsonError("Token not found or already revoked", 404);
     return jsonOk({ ok: true });
-  });
+  }, { role: ROLE_FOR.manageTokens });
 }

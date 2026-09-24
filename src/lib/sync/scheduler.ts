@@ -1,7 +1,10 @@
 import { drainDeliveries } from "@/lib/alerts/outbox";
-import { TICK_INTERVAL_SECONDS } from "./config";
+import { logger } from "@/lib/log";
+import { tickIntervalSeconds } from "./config";
 import { pruneHistory } from "./retention";
 import { runDueSyncs } from "./runner";
+
+const log = logger("sync");
 
 /** History retention is a slow-moving concern; once an hour is plenty. */
 const PRUNE_INTERVAL_MS = 60 * 60 * 1000;
@@ -19,7 +22,7 @@ export type Scheduler = { stop: () => void };
 let running: Scheduler | null = null;
 
 export function startScheduler(
-  { intervalSeconds = TICK_INTERVAL_SECONDS, onReport = defaultReport } = {} as {
+  { intervalSeconds = tickIntervalSeconds(), onReport = defaultReport } = {} as {
     intervalSeconds?: number;
     onReport?: (report: Awaited<ReturnType<typeof runDueSyncs>>) => void;
   },
@@ -47,22 +50,25 @@ export function startScheduler(
        */
       const drained = await drainDeliveries();
       if (drained.attempted > 0) {
-        console.log(
-          `[alerts] sent=${drained.sent} retrying=${drained.failed} abandoned=${drained.abandoned}`,
-        );
+        log.info("alerts drained", {
+          sent: drained.sent,
+          retrying: drained.failed,
+          abandoned: drained.abandoned,
+        });
       }
 
       if (Date.now() - lastPrune > PRUNE_INTERVAL_MS) {
         lastPrune = Date.now();
         const pruned = await pruneHistory();
         if (pruned.deleted > 0) {
-          console.log(
-            `[sync] pruned ${pruned.deleted} history rows across ${pruned.organizations} organizations`,
-          );
+          log.info("history pruned", {
+            deleted: pruned.deleted,
+            organizations: pruned.organizations,
+          });
         }
       }
     } catch (error) {
-      console.error("[sync] tick failed:", error);
+      log.error("tick failed", {}, error);
     } finally {
       inFlight = false;
     }
@@ -74,7 +80,7 @@ export function startScheduler(
 
   // Log on start, not only when there is work: an operator needs to be able to
   // tell "nothing was due" apart from "the scheduler never came up".
-  console.log(`[sync] scheduler started · tick=${intervalSeconds}s`);
+  log.info("scheduler started", { tickSeconds: intervalSeconds });
   void tick();
 
   running = {
@@ -88,11 +94,10 @@ export function startScheduler(
 }
 
 function defaultReport(report: Awaited<ReturnType<typeof runDueSyncs>>) {
-  const parts = [
-    `claimed=${report.claimed}`,
-    `ok=${report.succeeded}`,
-    `failed=${report.failed}`,
-  ];
-  if (report.disabled > 0) parts.push(`disabled=${report.disabled}`);
-  console.log(`[sync] ${parts.join(" ")}`);
+  log.info("tick", {
+    claimed: report.claimed,
+    ok: report.succeeded,
+    failed: report.failed,
+    ...(report.disabled > 0 ? { disabled: report.disabled } : {}),
+  });
 }

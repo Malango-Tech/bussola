@@ -1,3 +1,5 @@
+import { edition, env, type Edition } from "@/lib/env";
+
 /**
  * Bussola ships as one codebase in two editions.
  *
@@ -10,36 +12,22 @@
  * editions, so the self-hosted path exercises the same isolation code that
  * keeps cloud customers apart.
  */
-export type Edition = "self-hosted" | "cloud";
+export type { Edition };
 
-export const EDITION: Edition =
-  process.env.BUSSOLA_EDITION === "cloud" ? "cloud" : "self-hosted";
+export const EDITION: Edition = edition();
 
 export const isCloud = EDITION === "cloud";
 export const isSelfHosted = !isCloud;
 
 /**
- * Fail fast on a cloud deployment that is missing the configuration which keeps
- * customer credentials safe. Self-hosted installs stay permissive so that
- * `npm run dev` works with no environment at all.
+ * Fail fast on a deployment whose configuration is wrong.
+ *
+ * Validates the whole environment (`lib/env`), which for a cloud deployment
+ * includes refusing to run without the configuration that keeps customer
+ * credentials safe. Self-hosted installs stay permissive about what is unset
+ * so that `npm run dev` works with no environment at all — but a value that
+ * is set and malformed is an error in either edition.
  */
 export function assertEditionConfig(): void {
-  if (!isCloud) return;
-
-  const missing: string[] = [];
-  if (!process.env.DATABASE_URL) missing.push("DATABASE_URL");
-  if (!process.env.BUSSOLA_ENCRYPTION_KEY) {
-    missing.push("BUSSOLA_ENCRYPTION_KEY");
-  }
-  if (!process.env.BETTER_AUTH_SECRET) missing.push("BETTER_AUTH_SECRET");
-  // Without it, request origins are inferred rather than pinned — fine for a
-  // laptop, too loose for a deployment taking other people's credentials.
-  if (!process.env.BETTER_AUTH_URL) missing.push("BETTER_AUTH_URL");
-
-  if (missing.length) {
-    throw new Error(
-      `BUSSOLA_EDITION=cloud requires ${missing.join(", ")}. ` +
-        "Refusing to start: the local-dev fallbacks are not safe for hosted use.",
-    );
-  }
+  env();
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { jsonError, jsonOk, withTenant } from "@/lib/api";
+import { jsonError, jsonOk, ROLE_FOR, withTenant } from "@/lib/api";
 import { getSession } from "@/lib/auth/tenant";
 import { isPlanId, priceIdFor, type BillingInterval } from "@/lib/billing/plans";
 import { appUrl, billingConfigured, getStripe } from "@/lib/billing/stripe";
@@ -54,5 +54,5 @@ export async function POST(request: Request) {
     });
 
     return jsonOk({ url: checkout.url });
-  });
+  }, { role: ROLE_FOR.manageBilling });
 }

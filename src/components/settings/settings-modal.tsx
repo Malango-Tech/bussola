@@ -63,7 +63,10 @@ export function SettingsModal() {
       >
         <DialogTitle className="sr-only">Settings</DialogTitle>
 
-        <nav className="flex shrink-0 flex-row gap-1 overflow-x-auto border-b border-border p-3 sm:w-56 sm:flex-col sm:gap-0.5 sm:overflow-visible sm:border-r sm:border-b-0 sm:p-4">
+        <nav
+          aria-label="Settings sections"
+          className="flex shrink-0 flex-row gap-1 overflow-x-auto border-b border-border p-3 sm:w-56 sm:flex-col sm:gap-0.5 sm:overflow-visible sm:border-r sm:border-b-0 sm:p-4"
+        >
           <p className="hidden px-2.5 pb-2 text-xs font-medium text-muted-foreground sm:block">
             Settings
           </p>
@@ -74,6 +77,7 @@ export function SettingsModal() {
               <button
                 key={item.tab}
                 type="button"
+                aria-current={active ? "page" : undefined}
                 onClick={() => setTab(item.tab)}
                 className={cn(
                   "flex shrink-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors",
@@ -82,7 +86,7 @@ export function SettingsModal() {
                     : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                 )}
               >
-                <Icon className="size-4 shrink-0" />
+                <Icon className="size-4 shrink-0" aria-hidden />
                 {item.label}
               </button>
             );
@@ -97,7 +101,7 @@ export function SettingsModal() {
             <DialogClose
               render={<Button variant="ghost" size="icon-sm" />}
             >
-              <XIcon className="size-4" />
+              <XIcon className="size-4" aria-hidden />
               <span className="sr-only">Close</span>
             </DialogClose>
           </header>
@@ -143,13 +147,13 @@ function GeneralTab() {
         />
         <div className="flex items-center gap-2">
           <Badge variant={encryptionConfigured ? "secondary" : "outline"}>
-            {encryptionConfigured ? "Custom key set" : "Dev fallback key"}
+            {encryptionConfigured ? "Custom key set" : "Generated local key"}
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          Set <code className="text-foreground">BUSSOLA_ENCRYPTION_KEY</code>{" "}
-          in your environment to a 64-char hex string for production-grade
-          local secret storage.
+          Without <code className="text-foreground">BUSSOLA_ENCRYPTION_KEY</code>,
+          a random key is generated in the data directory. Back it up with the
+          database: without it, stored credentials cannot be decrypted.
         </p>
       </section>
     </div>
@@ -189,20 +193,22 @@ function AccountTab() {
       <SectionHeading title="Change password" />
       <form onSubmit={changePassword} className="max-w-sm space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="current">Current password</Label>
+          <Label htmlFor="current-password">Current password</Label>
           <Input
-            id="current"
+            id="current-password"
             type="password"
+            autoComplete="current-password"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             required
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="next">New password</Label>
+          <Label htmlFor="new-password">New password</Label>
           <Input
-            id="next"
+            id="new-password"
             type="password"
+            autoComplete="new-password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             minLength={8}

@@ -10,9 +10,22 @@ import { sentryConnector } from "./sentry";
 import { stripeConnector } from "./stripe";
 import { supabaseConnector } from "./supabase";
 import { vercelConnector } from "./vercel";
-import type { ConnectionCredentials, Connector, TestResult } from "./types";
+import type {
+  ConnectionCredentials,
+  Connector,
+  SyncableProvider,
+  TestResult,
+} from "./types";
 
-const connectors: Record<string, Connector> = {
+/**
+ * Every live connector, keyed by the provider it serves.
+ *
+ * The one list a new connector is added to: the connection test, the sync
+ * worker's snapshot fetch and the registry tests all read it. The mapped type
+ * pins each entry's `provider` to its key, so a connector registered under the
+ * wrong name does not compile.
+ */
+export const CONNECTORS = {
   railway: railwayConnector,
   netlify: netlifyConnector,
   supabase: supabaseConnector,
@@ -22,7 +35,9 @@ const connectors: Record<string, Connector> = {
   sentry: sentryConnector,
   resend: resendConnector,
   vercel: vercelConnector,
-};
+  // `satisfies` rather than an annotation, so each entry keeps its concrete
+  // dashboard type: the sync worker checks those against what widgets read.
+} as const satisfies { readonly [P in SyncableProvider]: Connector<unknown, P> };
 
 /** Wave 1: everything that authenticates with a pasted key or token. */
 export const LIVE_PROVIDERS: Provider[] = [
@@ -35,7 +50,7 @@ export const LIVE_PROVIDERS: Provider[] = [
   "lemonsqueezy",
   "resend",
   "qonto",
-];
+] satisfies SyncableProvider[];
 
 /** Wave 2 needs an OAuth app; the rest is planned but unscheduled. */
 export const COMING_SOON_PROVIDERS: Provider[] = [
@@ -48,8 +63,18 @@ export const COMING_SOON_PROVIDERS: Provider[] = [
   "webtraffic",
 ];
 
+/**
+ * Whether a provider has a live connector. An own-property check, so a stored
+ * provider string can never resolve to something inherited like `toString`.
+ */
+export function isSyncableProvider(
+  provider: string,
+): provider is SyncableProvider {
+  return Object.prototype.hasOwnProperty.call(CONNECTORS, provider);
+}
+
 export function getConnector(provider: string): Connector | null {
-  return connectors[provider] || null;
+  return isSyncableProvider(provider) ? CONNECTORS[provider] : null;
 }
 
 export function parseCredentials(encrypted: string): ConnectionCredentials {

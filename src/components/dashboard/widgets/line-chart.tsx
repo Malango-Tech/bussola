@@ -9,6 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { seriesSummary } from "./chart-summary";
 
 export type LineChartPoint = {
   label: string;
@@ -18,11 +19,13 @@ export type LineChartPoint = {
 
 type LineChartProps = {
   points: LineChartPoint[];
+  /** What the series measures, e.g. "CPU" — the start of its accessible name. */
+  label?: string;
   className?: string;
 };
 
 /** A single-series area/line chart for a value over time. */
-export function LineChart({ points, className }: LineChartProps) {
+export function LineChart({ points, label = "Chart", className }: LineChartProps) {
   if (points.length < 2) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -40,10 +43,17 @@ export function LineChart({ points, className }: LineChartProps) {
 
   return (
     <div className={cn("flex h-full min-h-0 flex-col", className)}>
-      <div className="min-h-0 flex-1">
+      <div
+        className="min-h-0 flex-1"
+        role="img"
+        aria-label={seriesSummary(label, points)}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <RechartsAreaChart
             data={points}
+            // The wrapper is the accessible element; Recharts' own layer would
+            // add an unnamed, focusable "application" inside an image.
+            accessibilityLayer={false}
             margin={{ top: 8, right: 4, left: 0, bottom: 0 }}
           >
             <defs>

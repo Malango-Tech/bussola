@@ -3,11 +3,14 @@ import {
   checkLimit as checkPlanLimit,
   entitlementsFor,
 } from "@/lib/billing/entitlements";
+import { logger } from "@/lib/log";
 import { WIDGET_REGISTRY, getWidgetDefinition } from "@/lib/widgets/registry";
 import { parseWidgetConfig } from "@/lib/widgets/config";
 import { serveWidgetData } from "@/lib/widgets/serve";
 import type { WidgetType } from "@/lib/widgets/registry";
 import type { McpPrincipal } from "./auth";
+
+const log = logger("mcp");
 
 /**
  * What an agent can do with a Bussola organization.
@@ -295,7 +298,7 @@ export async function callTool(
             widgetType: widget.widgetType,
             title: widget.title,
             connectionId: widget.connectionId,
-            config: parseWidgetConfig(safeJson(widget.configJson)),
+            config: parseWidgetConfig(safeJson(widget.configJson, widget.id)),
             layout: {
               x: widget.layoutX,
               y: widget.layoutY,
@@ -544,10 +547,19 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-function safeJson(raw: string): unknown {
+/**
+ * A widget's stored options, or none. Unreadable options fall back to the
+ * widget's defaults, which is what the canvas shows for it too — so this is a
+ * debug line rather than a failed tool call.
+ */
+function safeJson(raw: string, widgetId: string): unknown {
   try {
     return JSON.parse(raw || "{}");
-  } catch {
+  } catch (error) {
+    log.debug("widget config is not valid JSON; using defaults", {
+      widgetId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return {};
   }
 }

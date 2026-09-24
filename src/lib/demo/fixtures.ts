@@ -146,7 +146,8 @@ const netlify = {
   items: [
     { id: "n1", name: "landing", provider: "netlify", status: "ok", detail: "Published", updatedAt: hoursAgo(9) },
   ],
-  trackers: { landing: OK_TRAIL },
+  // Keyed by site id, as the connector keys them.
+  trackers: { n1: OK_TRAIL },
   healthy: 1,
   total: 1,
   recentDeploys: [

@@ -25,6 +25,7 @@ export function SignupForm({
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [awaitingVerification, setAwaitingVerification] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,10 +41,12 @@ export function SignupForm({
     }
 
     setLoading(true);
-    const { error: signUpError } = await signUp.email({
+    const { data, error: signUpError } = await signUp.email({
       name: name.trim(),
       email,
       password,
+      // Where the verification link lands, when verification is on.
+      callbackURL: next || "/dashboards",
     });
     setLoading(false);
 
@@ -52,8 +55,27 @@ export function SignupForm({
       return;
     }
 
+    // No session means the address has to be confirmed first.
+    if (!data?.token) {
+      setAwaitingVerification(true);
+      return;
+    }
+
     router.push(next || "/dashboards");
     router.refresh();
+  }
+
+  if (awaitingVerification) {
+    return (
+      <div className="space-y-2 text-center" role="status">
+        <h2 className="text-lg font-semibold tracking-tight">Check your inbox</h2>
+        <p className="text-sm text-muted-foreground">
+          We sent a confirmation link to{" "}
+          <span className="text-foreground">{email}</span>. Open it to finish
+          creating your account.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -101,7 +123,11 @@ export function SignupForm({
           required
         />
       </div>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
       <Button type="submit" className="w-full" disabled={loading}>
         {loading
           ? "Creating account…"

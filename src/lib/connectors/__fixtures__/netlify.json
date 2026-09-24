@@ -1,0 +1,146 @@
+{
+  "sites": [
+    {
+      "id": "3970e0fe-8564-4903-9a55-c5f8de49fb8b",
+      "site_id": "3970e0fe-8564-4903-9a55-c5f8de49fb8b",
+      "name": "acme-marketing",
+      "url": "https://acme.dev",
+      "ssl_url": "https://acme.dev",
+      "admin_url": "https://app.netlify.com/sites/acme-marketing",
+      "account_slug": "acme",
+      "account_name": "Acme",
+      "created_at": "2025-01-10T09:00:00.000Z",
+      "updated_at": "2026-09-19T16:00:00.000Z",
+      "published_deploy": {
+        "id": "66f0a1b2c3d4e5f600000003",
+        "state": "ready",
+        "branch": "main",
+        "created_at": "2026-09-19T15:58:00.000Z",
+        "published_at": "2026-09-19T16:00:00.000Z"
+      }
+    },
+    {
+      "id": "b2c1f7aa-1d4e-4c9b-8f3e-2a7d9c0e1f23",
+      "site_id": "b2c1f7aa-1d4e-4c9b-8f3e-2a7d9c0e1f23",
+      "name": "acme-docs",
+      "url": "https://docs.acme.dev",
+      "account_slug": "acme",
+      "updated_at": "2026-09-20T10:05:00.000Z",
+      "published_deploy": {
+        "id": "66f0a1b2c3d4e5f600000011",
+        "state": "error",
+        "branch": "main",
+        "created_at": "2026-09-20T10:00:00.000Z"
+      }
+    },
+    {
+      "id": "e7d6c5b4-0000-4a3b-9c8d-7e6f5a4b3c2d",
+      "site_id": "e7d6c5b4-0000-4a3b-9c8d-7e6f5a4b3c2d",
+      "name": "playground",
+      "url": "https://playground-acme.netlify.app",
+      "account_slug": "acme",
+      "updated_at": "2026-08-01T00:00:00.000Z",
+      "published_deploy": null
+    }
+  ],
+  "deploysMarketing": [
+    {
+      "id": "66f0a1b2c3d4e5f600000003",
+      "site_id": "3970e0fe-8564-4903-9a55-c5f8de49fb8b",
+      "state": "ready",
+      "name": "acme-marketing",
+      "branch": "main",
+      "context": "production",
+      "created_at": "2026-09-19T15:58:00.000Z"
+    },
+    {
+      "id": "66f0a1b2c3d4e5f600000002",
+      "site_id": "3970e0fe-8564-4903-9a55-c5f8de49fb8b",
+      "state": "error",
+      "name": "acme-marketing",
+      "branch": "main",
+      "context": "production",
+      "error_message": "Build script returned non-zero exit code: 2",
+      "created_at": "2026-09-18T11:00:00.000Z"
+    },
+    {
+      "id": "66f0a1b2c3d4e5f600000001",
+      "site_id": "3970e0fe-8564-4903-9a55-c5f8de49fb8b",
+      "state": "ready",
+      "name": "acme-marketing",
+      "branch": "main",
+      "context": "production",
+      "created_at": "2026-09-17T09:00:00.000Z"
+    }
+  ],
+  "deploysDocs": [
+    {
+      "id": "66f0a1b2c3d4e5f600000012",
+      "site_id": "b2c1f7aa-1d4e-4c9b-8f3e-2a7d9c0e1f23",
+      "state": "building",
+      "name": "acme-docs",
+      "branch": "fix/sidebar",
+      "context": "deploy-preview",
+      "created_at": "2026-09-20T11:30:00.000Z"
+    },
+    {
+      "id": "66f0a1b2c3d4e5f600000011",
+      "site_id": "b2c1f7aa-1d4e-4c9b-8f3e-2a7d9c0e1f23",
+      "state": "error",
+      "name": "acme-docs",
+      "branch": "main",
+      "context": "production",
+      "created_at": "2026-09-20T10:00:00.000Z"
+    }
+  ],
+  "formsMarketing": [
+    {
+      "id": "5f1a2b3c4d5e6f7a8b9c0d1e",
+      "site_id": "3970e0fe-8564-4903-9a55-c5f8de49fb8b",
+      "name": "newsletter",
+      "paths": ["/"],
+      "submission_count": 7,
+      "fields": [{ "name": "email", "type": "email" }],
+      "created_at": "2025-03-01T00:00:00.000Z"
+    },
+    {
+      "id": "5f1a2b3c4d5e6f7a8b9c0d1f",
+      "site_id": "3970e0fe-8564-4903-9a55-c5f8de49fb8b",
+      "name": "contact",
+      "paths": ["/contact"],
+      "submission_count": 42,
+      "fields": [{ "name": "message", "type": "textarea" }],
+      "created_at": "2025-03-01T00:00:00.000Z"
+    }
+  ],
+  "accounts": [
+    {
+      "id": "5a8b0c1d2e3f405162738495",
+      "name": "Acme",
+      "slug": "acme",
+      "type": "PRO",
+      "type_name": "Pro",
+      "capabilities": { "sites": { "included": "unlimited", "used": 3 } },
+      "billing_period": "monthly"
+    }
+  ],
+  "buildStatus": [
+    {
+      "active": 1,
+      "pending_concurrency": 0,
+      "enqueued": 2,
+      "build_count": 3,
+      "minutes": {
+        "current": 270,
+        "current_average_sec": 95,
+        "previous": 225,
+        "period_start_date": "2026-09-01T00:00:00.000Z",
+        "period_end_date": "2026-10-01T00:00:00.000Z",
+        "last_updated_at": "2026-09-20T11:00:00.000Z",
+        "included_minutes": "25000",
+        "included_minutes_with_packs": "25000"
+      }
+    }
+  ],
+  "unauthorized": { "code": 401, "message": "Access Denied: Invalid token" }
+}

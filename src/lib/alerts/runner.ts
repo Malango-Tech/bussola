@@ -1,6 +1,8 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
+import { valuesTable } from "@/lib/db/batch";
 import {
+  alertDeliveries,
   alertEvents,
   alertRules,
   connectionSnapshots,
@@ -11,11 +13,14 @@ import {
 } from "@/lib/db/schema";
 import { entitlementsFor } from "@/lib/billing/entitlements";
 import { createId } from "@/lib/id";
+import { logger } from "@/lib/log";
 import { DASHBOARD_KIND } from "@/lib/sync/config";
 import type { AlertNotification } from "./deliver";
 import { evaluateRule } from "./evaluate";
 import { getMetric } from "./metrics";
-import { enqueueDeliveries } from "./outbox";
+import { deliveryRows } from "./outbox";
+
+const log = logger("alerts");
 
 /**
  * Evaluating a connection's alert rules, right after its snapshot is written.
@@ -60,9 +65,13 @@ export async function evaluateAlertsForConnection(input: {
   try {
     return await run(input);
   } catch (error) {
-    console.warn(
-      `[alerts] evaluation failed for ${input.connectionId}:`,
-      error instanceof Error ? error.message : error,
+    log.warn(
+      "evaluation failed",
+      {
+        connectionId: input.connectionId,
+        organizationId: input.organizationId,
+      },
+      error,
     );
     return EMPTY;
   }
@@ -112,9 +121,11 @@ async function run({
   let payload: Record<string, unknown> | null = null;
   try {
     payload = JSON.parse(snapshot.payloadJson) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
     // A snapshot we cannot parse is the same as no snapshot: every rule skips
-    // with "no_value" rather than firing on a guess.
+    // with "no_value" rather than firing on a guess. Logged, because the sync
+    // that wrote it believed it had succeeded.
+    log.warn("snapshot is not valid JSON", { connectionId, organizationId }, error);
     payload = null;
   }
 
@@ -125,6 +136,28 @@ async function run({
   // a handful of channels and every rule reads from the same set.
   const channels = await loadChannels(organizationId);
   const entitlements = await entitlementsFor(organizationId);
+  const allowedChannels = new Set<string>(entitlements.features.alertChannels);
+
+  /*
+   * Decide everything first, write it once.
+   *
+   * Evaluation is pure, so the loop below only collects what should change.
+   * The writes — skipped-rule stamps, new events, their queued deliveries and
+   * every rule's new state — then go out as at most four statements in one
+   * transaction, instead of one to three round trips per rule. The
+   * transaction also closes a gap the loop had: an event could be written
+   * and the rule's state update then fail, so the next sync would fire the
+   * same alert again.
+   */
+  const skippedIds: string[] = [];
+  const ruleUpdates: Array<{
+    id: string;
+    last_state: AlertState;
+    last_value: string;
+    notified: boolean;
+  }> = [];
+  const events: Array<typeof alertEvents.$inferInsert> = [];
+  const deliveries: ReturnType<typeof deliveryRows> = [];
 
   for (const rule of rules) {
     const result = evaluateRule(
@@ -145,10 +178,7 @@ async function run({
     if (result.kind === "skipped") {
       // Still stamped, so the UI can say "checked, nothing to read" rather
       // than leaving a rule looking as though it never ran.
-      await db
-        .update(alertRules)
-        .set({ lastEvaluatedAt: now })
-        .where(eq(alertRules.id, rule.id));
+      skippedIds.push(rule.id);
       continue;
     }
 
@@ -169,10 +199,10 @@ async function run({
         message: result.message,
       };
 
-      // The in-app feed is written first and unconditionally, so a broken
-      // webhook loses the notification, never the alert.
+      // The in-app feed is written unconditionally, so a broken webhook loses
+      // the notification, never the alert.
       const eventId = createId("aev");
-      await db.insert(alertEvents).values({
+      events.push({
         id: eventId,
         organizationId,
         ruleId: rule.id,
@@ -183,29 +213,73 @@ async function run({
         createdAt: now,
       });
 
-      report.queued += await enqueueDeliveries({
+      const queued = deliveryRows({
         organizationId,
         eventId,
-        channelIds: targetChannelIds({
-          rule,
-          channels,
-          allowedChannels: new Set(entitlements.features.alertChannels),
-        }),
+        channelIds: targetChannelIds({ rule, channels, allowedChannels }),
         notification,
       });
+      deliveries.push(...queued);
+      report.queued += queued.length;
     }
 
-    await db
-      .update(alertRules)
-      .set({
-        lastState: result.state satisfies AlertState,
-        lastValue: String(result.value),
-        lastEvaluatedAt: now,
-        ...(result.notify ? { lastNotifiedAt: now } : {}),
-        updatedAt: now,
-      })
-      .where(eq(alertRules.id, rule.id));
+    ruleUpdates.push({
+      id: rule.id,
+      last_state: result.state,
+      last_value: String(result.value),
+      notified: result.notify,
+    });
   }
+
+  await db.transaction(async (tx) => {
+    if (skippedIds.length > 0) {
+      await tx
+        .update(alertRules)
+        .set({ lastEvaluatedAt: now })
+        .where(
+          and(
+            inArray(alertRules.id, skippedIds),
+            eq(alertRules.organizationId, organizationId),
+          ),
+        );
+    }
+
+    // Events before deliveries: each delivery row references its event.
+    if (events.length > 0) await tx.insert(alertEvents).values(events);
+    if (deliveries.length > 0) {
+      await tx.insert(alertDeliveries).values(deliveries);
+    }
+
+    if (ruleUpdates.length > 0) {
+      const update = valuesTable(
+        "evaluated",
+        {
+          id: "text",
+          last_state: "text",
+          last_value: "text",
+          notified: "boolean",
+        },
+        ruleUpdates,
+      );
+      await tx
+        .update(alertRules)
+        .set({
+          lastState: sql<AlertState>`${update.column("last_state")}`,
+          lastValue: update.column("last_value"),
+          lastEvaluatedAt: now,
+          // Only a notification moves the cooldown clock.
+          lastNotifiedAt: sql`case when ${update.column("notified")} then ${now.toISOString()}::timestamptz else ${alertRules.lastNotifiedAt} end`,
+          updatedAt: now,
+        })
+        .from(update.from)
+        .where(
+          and(
+            eq(alertRules.id, update.column("id")),
+            eq(alertRules.organizationId, organizationId),
+          ),
+        );
+    }
+  });
 
   return report;
 }
@@ -249,7 +323,7 @@ function targetChannelIds({
   channels,
   allowedChannels,
 }: {
-  rule: { channelIdsJson: string };
+  rule: { id: string; channelIdsJson: string };
   channels: ChannelRow[];
   allowedChannels: Set<string>;
 }): string[] {
@@ -259,7 +333,10 @@ function targetChannelIds({
     if (Array.isArray(parsed)) {
       wanted = parsed.filter((id) => typeof id === "string");
     }
-  } catch {
+  } catch (error) {
+    // The rule still fires into the in-app feed; only its channels are lost,
+    // which from the outside looks exactly like a webhook that never answered.
+    log.warn("rule has unreadable channel ids", { ruleId: rule.id }, error);
     wanted = [];
   }
 

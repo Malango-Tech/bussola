@@ -2,7 +2,7 @@ import { startOfHour } from "date-fns";
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { connectionHistory } from "@/lib/db/schema";
-import { entitlementsFor } from "@/lib/billing/entitlements";
+import { entitlementsForMany } from "@/lib/billing/entitlements";
 import { isCloud } from "@/lib/edition";
 import { createId } from "@/lib/id";
 
@@ -66,26 +66,43 @@ export async function pruneHistory(): Promise<PruneReport> {
   const organizations = await db
     .selectDistinct({ organizationId: connectionHistory.organizationId })
     .from(connectionHistory);
+  const ids = organizations.map((row) => row.organizationId);
 
-  let deleted = 0;
-  for (const { organizationId } of organizations) {
-    const { limits } = await entitlementsFor(organizationId);
-    if (!Number.isFinite(limits.historyDays)) continue;
-
-    const cutoff = new Date(
-      Date.now() - limits.historyDays * 24 * 60 * 60 * 1000,
-    );
-    const rows = await db
-      .delete(connectionHistory)
-      .where(
-        and(
-          eq(connectionHistory.organizationId, organizationId),
-          lt(connectionHistory.bucket, cutoff),
-        ),
-      )
-      .returning({ id: connectionHistory.id });
-    deleted += rows.length;
+  /*
+   * Grouped by retention rather than walked per organization.
+   *
+   * This used to look up each organization's plan and delete its rows one
+   * tenant at a time: two queries per customer, every hour. Retention only
+   * takes as many values as there are plans, so the plans are read in one
+   * query and each distinct retention is one DELETE across every tenant on
+   * it — a handful of statements however many customers there are.
+   */
+  const entitlements = await entitlementsForMany(ids);
+  const byRetention = new Map<number, string[]>();
+  for (const id of ids) {
+    const days = entitlements.get(id)?.limits.historyDays ?? Infinity;
+    if (!Number.isFinite(days)) continue;
+    byRetention.set(days, [...(byRetention.get(days) ?? []), id]);
   }
+
+  const now = Date.now();
+  const deleted = await db.transaction(async (tx) => {
+    let total = 0;
+    for (const [days, organizationIds] of byRetention) {
+      const cutoff = new Date(now - days * 24 * 60 * 60 * 1000);
+      const rows = await tx
+        .delete(connectionHistory)
+        .where(
+          and(
+            inArray(connectionHistory.organizationId, organizationIds),
+            lt(connectionHistory.bucket, cutoff),
+          ),
+        )
+        .returning({ id: connectionHistory.id });
+      total += rows.length;
+    }
+    return total;
+  });
 
   return { organizations: organizations.length, deleted };
 }

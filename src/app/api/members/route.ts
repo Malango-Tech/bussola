@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { jsonError, jsonOk, withTenant } from "@/lib/api";
+import { jsonError, jsonOk, ROLE_FOR, withTenant } from "@/lib/api";
 import { entitlementsFor } from "@/lib/billing/entitlements";
 import { emailConfigured, EMAIL_SETUP_HINT } from "@/lib/notify/email";
 
@@ -63,19 +63,19 @@ export async function DELETE(request: Request) {
     });
     if (!parsed.success) return jsonError("memberId required");
 
-    const role = await repos.members.roleOf(repos.ctx.userId);
-    if (role !== "owner" && role !== "admin") {
-      return jsonError("Only an owner or admin can remove members", 403);
-    }
-
     const result = await repos.members.removeMember(parsed.data.memberId);
     if (result.ok) return jsonOk({ ok: true });
 
-    return result.reason === "last_owner"
-      ? jsonError(
+    switch (result.reason) {
+      case "last_owner":
+        return jsonError(
           "This is the only owner. Make someone else an owner first.",
           409,
-        )
-      : jsonError("Member not found", 404);
-  });
+        );
+      case "forbidden":
+        return jsonError("Only an owner can remove another owner.", 403);
+      default:
+        return jsonError("Member not found", 404);
+    }
+  }, { role: ROLE_FOR.manageMembers });
 }

@@ -1,0 +1,136 @@
+{
+  "domains": {
+    "object": "list",
+    "has_more": false,
+    "data": [
+      {
+        "id": "d91cd9bd-1176-453e-8fc1-35364d380206",
+        "name": "mail.acme.dev",
+        "status": "verified",
+        "created_at": "2025-04-26 20:21:26.347412+00",
+        "region": "eu-west-1",
+        "capabilities": { "sending": "enabled", "receiving": "disabled" }
+      },
+      {
+        "id": "ac7a9c2e-0f5d-4b1e-9a8b-1c2d3e4f5a6b",
+        "name": "news.acme.dev",
+        "status": "pending",
+        "created_at": "2026-09-19 08:00:00.000000+00",
+        "region": "us-east-1"
+      },
+      {
+        "id": "5e4d3c2b-1a09-4f8e-8d7c-6b5a4f3e2d1c",
+        "name": "old.acme.dev",
+        "status": "partially_failed",
+        "created_at": "2024-01-02 10:00:00.000000+00",
+        "region": "us-east-1"
+      }
+    ]
+  },
+  "emails": {
+    "object": "list",
+    "has_more": false,
+    "data": [
+      {
+        "id": "4ef9a417-02e9-4d39-ad75-9611e0fcc33c",
+        "to": ["grace@example.com"],
+        "from": "Acme <receipts@mail.acme.dev>",
+        "created_at": "2026-09-20 10:12:00.123456+00",
+        "subject": "Your receipt from Acme",
+        "bcc": null,
+        "cc": null,
+        "reply_to": null,
+        "last_event": "opened",
+        "scheduled_at": null
+      },
+      {
+        "id": "7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+        "to": ["bounce@example.com", "cc-in-to@example.com"],
+        "from": "Acme <hello@mail.acme.dev>",
+        "created_at": "2026-09-20 09:00:00.000000+00",
+        "subject": "",
+        "last_event": "bounced",
+        "scheduled_at": null
+      },
+      {
+        "id": "0f9e8d7c-6b5a-4f3e-9d2c-1b0a9f8e7d6c",
+        "to": "single@example.com",
+        "from": "Acme <hello@mail.acme.dev>",
+        "created_at": "2026-09-20 08:30:00.000000+00",
+        "subject": "Welcome aboard"
+      }
+    ]
+  },
+  "broadcasts": {
+    "object": "list",
+    "has_more": false,
+    "data": [
+      {
+        "id": "49a3999c-0ce1-4ea6-ab68-afcd6dc2e794",
+        "audience_id": "78261eea-8f8b-4381-83c6-79fa7120f1cf",
+        "name": "September newsletter",
+        "status": "sent",
+        "created_at": "2026-09-01 12:00:00.000000+00",
+        "scheduled_at": null,
+        "sent_at": "2026-09-02 09:00:00.000000+00"
+      },
+      {
+        "id": "559ac32e-9ef5-46fb-82a1-b76b840c0f7b",
+        "audience_id": "78261eea-8f8b-4381-83c6-79fa7120f1cf",
+        "name": "   ",
+        "status": "draft",
+        "created_at": "2026-09-10 12:00:00.000000+00",
+        "scheduled_at": null,
+        "sent_at": null
+      },
+      {
+        "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+        "audience_id": "78261eea-8f8b-4381-83c6-79fa7120f1cf",
+        "name": "Autumn launch",
+        "status": "scheduled",
+        "created_at": "2026-09-15 12:00:00.000000+00",
+        "scheduled_at": "2026-09-25 08:00:00.000000+00",
+        "sent_at": null
+      }
+    ]
+  },
+  "metrics": {
+    "totals": {
+      "sent": 100,
+      "delivered": 92,
+      "opened": 55,
+      "unique_opened": 40,
+      "clicked": 14,
+      "unique_clicked": 10,
+      "bounced": 6,
+      "failed": 2,
+      "delivery_rate": 0.92,
+      "open_rate": 0.4348,
+      "click_rate": 0.1087
+    },
+    "data": [
+      {
+        "period": "2026-09-19",
+        "sent": 60,
+        "delivered": 55,
+        "delivery_rate": 0.9167,
+        "open_rate": 0.45,
+        "click_rate": 0.1
+      },
+      {
+        "period": "2026-09-20",
+        "sent": 40,
+        "delivered": 37,
+        "delivery_rate": 0.925,
+        "open_rate": null,
+        "click_rate": 0.12
+      },
+      { "sent": 0 }
+    ]
+  },
+  "restrictedKey": {
+    "statusCode": 401,
+    "message": "This API key is restricted to only send emails",
+    "name": "restricted_api_key"
+  }
+}

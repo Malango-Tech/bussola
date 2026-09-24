@@ -7,6 +7,7 @@ import {
   rateLimitHeaders,
 } from "@/lib/http/rate-limit";
 import { bearerFrom, resolveApiToken } from "@/lib/mcp/auth";
+import { hashToken, looksLikeToken } from "@/lib/sharing/tokens";
 import {
   PROTOCOL_VERSION,
   handleMessage,
@@ -49,7 +50,19 @@ export async function POST(request: Request) {
     return unauthorized();
   }
 
-  const limited = rateLimit(`mcp:${bearer}`, LIMITS.mcp);
+  // Only a token shaped like ours gets its own bucket (a malformed one is
+  // guessing and is metered by address), and the bucket is keyed by its hash
+  // so the limiter never holds a live credential in memory.
+  if (!looksLikeToken(bearer)) {
+    const anonymous = rateLimit(
+      `mcp-anon:${callerAddress(request)}`,
+      LIMITS.mcpAnonymous,
+    );
+    if (!anonymous.ok) return tooMany(anonymous);
+    return unauthorized();
+  }
+
+  const limited = rateLimit(`mcp:${hashToken(bearer)}`, LIMITS.mcp);
   if (!limited.ok) return tooMany(limited);
 
   const principal = await resolveApiToken(bearer);

@@ -14,7 +14,8 @@ export default async function AppLayout({
   if (!(await hasAccount())) {
     redirect("/signup");
   }
-  if (!(await getSession())) {
+  const session = await getSession();
+  if (!session) {
     redirect("/login");
   }
 
@@ -35,6 +36,7 @@ export default async function AppLayout({
 
   return (
     <AppShell
+      role={session.role}
       setupState={{
         hasConnection: connectionCount > 0,
         hasDashboard: dashboardCount > 0,

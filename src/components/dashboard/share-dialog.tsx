@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { useCan } from "@/components/providers/role-provider";
 
 type ShareRow = {
   id: string;
@@ -58,6 +59,11 @@ const EXPIRY_CHOICES = [
  * that obvious rather than leaving someone to discover it, which is why a
  * fresh link gets its own panel with a copy button instead of appearing as
  * another row in the list.
+ *
+ * Anyone in the organization may see which links are live; creating and
+ * revoking them is an admin's call (`manageShares`). The server refuses both
+ * for a member regardless, so hiding the controls only spares them a form that
+ * was always going to fail — and says why, rather than leaving a gap.
  */
 export function ShareDialog({
   dashboardId,
@@ -65,6 +71,7 @@ export function ShareDialog({
   canShare,
   onClose,
 }: Props) {
+  const canManage = useCan("manageShares");
   const [shares, setShares] = useState<ShareRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -159,7 +166,10 @@ export function ShareDialog({
 
         {!canShare ? (
           <div className="flex items-start gap-2.5 rounded-lg border border-border bg-muted/40 p-3">
-            <WarningIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <WarningIcon
+              className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
             <div className="space-y-1 text-sm">
               <p className="font-medium">
                 Read-only links are not part of the {planName || "current"} plan.
@@ -180,6 +190,7 @@ export function ShareDialog({
             <div className="flex items-center gap-2">
               <Input
                 readOnly
+                aria-label="New share link"
                 value={shareUrl(freshToken)}
                 onFocus={(event) => event.currentTarget.select()}
                 className="font-mono text-xs"
@@ -206,7 +217,14 @@ export function ShareDialog({
           </div>
         ) : null}
 
-        {canShare ? (
+        {canShare && !canManage ? (
+          <p className="border-t border-border pt-4 text-sm text-muted-foreground">
+            Only admins can create or revoke links. Ask one if this dashboard
+            needs a new link, or an old one taken down.
+          </p>
+        ) : null}
+
+        {canShare && canManage ? (
           <div className="space-y-3 border-t border-border pt-4">
             <div className="space-y-1.5">
               <Label htmlFor="share-label">Label (optional)</Label>
@@ -302,15 +320,17 @@ export function ShareDialog({
                         : " · no expiry"}
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Revoke link"
-                    onClick={() => revoke(share.id)}
-                  >
-                    <ProhibitIcon className="size-4" />
-                  </Button>
+                  {canManage ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Revoke link ${share.label || `${share.tokenPrefix}…`}`}
+                      onClick={() => revoke(share.id)}
+                    >
+                      <ProhibitIcon className="size-4" />
+                    </Button>
+                  ) : null}
                 </li>
               ))}
             </ul>

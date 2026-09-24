@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { assertEditionConfig } from "@/lib/edition";
+import { dataDir, env } from "@/lib/env";
 import * as schema from "./schema";
 
 /**
@@ -15,6 +16,14 @@ import * as schema from "./schema";
  * running Bussola locally, not a shared deployment. Set DATABASE_URL for that.
  */
 export type BussolaDb = PgDatabase<PgQueryResultHKT, typeof schema>;
+
+/**
+ * The handle inside `db.transaction(...)`, for helpers that must run in the
+ * caller's transaction. Reaching for `getDb()` from inside one would open a
+ * second connection on Postgres — and wait forever on PGlite, whose single
+ * connection the transaction is holding.
+ */
+export type BussolaTx = Parameters<Parameters<BussolaDb["transaction"]>[0]>[0];
 
 type Handle = {
   db: BussolaDb;
@@ -31,13 +40,11 @@ function migrationsFolder(): string {
 }
 
 export function databaseUrl(): string | undefined {
-  return process.env.DATABASE_URL || undefined;
+  return env().DATABASE_URL;
 }
 
 function pgliteDataDir(): string {
-  const dataDir =
-    process.env.BUSSOLA_DATA_DIR || path.join(process.cwd(), "data");
-  return path.join(dataDir, "pgdata");
+  return path.join(dataDir(), "pgdata");
 }
 
 async function createHandle(): Promise<Handle> {
@@ -54,7 +61,7 @@ async function createHandle(): Promise<Handle> {
 
     const pool = new Pool({
       connectionString: url,
-      max: Number(process.env.DATABASE_POOL_MAX || 10),
+      max: env().DATABASE_POOL_MAX,
       // Managed Postgres (Supabase, Neon) terminates idle clients; keep the
       // pool small and let it recycle rather than holding dead sockets.
       idleTimeoutMillis: 30_000,

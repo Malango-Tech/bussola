@@ -6,8 +6,10 @@ import {
   rateLimitHeaders,
 } from "@/lib/http/rate-limit";
 import { resolveShare } from "@/lib/sharing/resolve";
+import { hashToken, looksLikeToken } from "@/lib/sharing/tokens";
 import { getWidgetDefinition, type WidgetType } from "@/lib/widgets/registry";
 import { applyFilter, envelopeFor, parseWidgetConfig } from "@/lib/widgets/config";
+import { projectPayload } from "@/lib/widgets/fields";
 import { serveWidgetData } from "@/lib/widgets/serve";
 
 export const runtime = "nodejs";
@@ -25,9 +27,11 @@ type Params = { params: Promise<{ token: string }> };
  * only what its own dashboard puts on screen — no more. That is enforced on
  * three axes, all server-side:
  *
- *  1. **Which widgets.** The requested type must match a widget on the shared
- *     dashboard, or a link to a deploy board would also answer for the
- *     organization's bank balance.
+ *  1. **Which widgets.** The requested type must belong to a provider with a
+ *     widget on the shared dashboard, or a link to a deploy board would also
+ *     answer for the organization's bank balance. Read-through types (live
+ *     bank transactions) must match a widget exactly, and the snapshot is
+ *     trimmed to the fields the dashboard's widgets actually read.
  *  2. **Which connections.** Cross-source widgets are capped to the
  *     connections this dashboard binds, so a status board cannot enumerate
  *     every source the organization has connected.
@@ -42,7 +46,13 @@ export async function GET(request: Request, { params }: Params) {
   // Metered on the token rather than the address: a link passed around an
   // office is many people behind one NAT, and one person on a phone is several
   // addresses. The token is what was shared, so it is what is metered.
-  const limited = rateLimit(`share-data:${token}`, LIMITS.shareData);
+  // A malformed token cannot be one of ours: refuse it before it can take a
+  // rate-limit bucket (or a database lookup).
+  if (!looksLikeToken(token)) {
+    return jsonError("This link is no longer active.", 404);
+  }
+
+  const limited = rateLimit(`share-data:${hashToken(token)}`, LIMITS.shareData);
   if (!limited.ok) {
     return NextResponse.json(
       { error: "Too many requests. Slow down and try again shortly." },
@@ -71,7 +81,15 @@ export async function GET(request: Request, { params }: Params) {
   const matching = widgets.filter(
     (widget) =>
       providerOf(widget.widgetType) === provider &&
-      (connectionId ? widget.connectionId === connectionId : true),
+      // Read-through types are not batched: each is its own upstream call and
+      // returns data no snapshot carries, so only that exact widget answers.
+      (!READ_THROUGH.has(type) || widget.widgetType === type) &&
+      // No connection named means the provider's default. Only a widget that
+      // itself reads the default may answer for it, or leaving the parameter
+      // off would reach an account the dashboard never binds.
+      (connectionId
+        ? widget.connectionId === connectionId
+        : widget.connectionId === null),
   );
 
   if (matching.length === 0) {
@@ -93,7 +111,10 @@ export async function GET(request: Request, { params }: Params) {
 
   const body =
     result.status === 200
-      ? applyFilter(type, envelopeFor(configs), result.body)
+      ? projectPayload(
+          matching.map((widget) => widget.widgetType as WidgetType),
+          applyFilter(type, envelopeFor(configs), result.body),
+        )
       : result.body;
 
   return NextResponse.json(body, {
@@ -148,6 +169,14 @@ function unionConnectionIds(
   if (declared.length === 0) return null;
   return [...new Set(declared.flatMap((config) => config.connectionIds ?? []))];
 }
+
+/**
+ * Widget types served live from the provider rather than from a snapshot.
+ *
+ * Every other type of a provider returns the same snapshot, which is why the
+ * client can poll one canonical type on behalf of all of them. These do not.
+ */
+const READ_THROUGH = new Set<WidgetType>(["qonto-transactions"]);
 
 function providerOf(type: string): string {
   return getWidgetDefinition(type)?.provider ?? "unknown";

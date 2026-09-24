@@ -1,0 +1,239 @@
+{
+  "balance": {
+    "object": "balance",
+    "available": [
+      { "amount": 482000, "currency": "eur", "source_types": { "card": 482000 } }
+    ],
+    "connect_reserved": [{ "amount": 0, "currency": "eur" }],
+    "livemode": true,
+    "pending": [
+      { "amount": 12950, "currency": "eur", "source_types": { "card": 12950 } }
+    ]
+  },
+  "subscriptionsPage1": {
+    "object": "list",
+    "url": "/v1/subscriptions",
+    "has_more": true,
+    "data": [
+      {
+        "id": "sub_1Pmonthly",
+        "object": "subscription",
+        "status": "active",
+        "currency": "eur",
+        "customer": "cus_Q1",
+        "items": {
+          "object": "list",
+          "data": [
+            {
+              "id": "si_1",
+              "object": "subscription_item",
+              "quantity": 1,
+              "price": {
+                "id": "price_pro_monthly",
+                "object": "price",
+                "currency": "eur",
+                "unit_amount": 2900,
+                "recurring": { "interval": "month", "interval_count": 1, "usage_type": "licensed" }
+              }
+            }
+          ],
+          "has_more": false
+        }
+      },
+      {
+        "id": "sub_2Pyearly",
+        "object": "subscription",
+        "status": "active",
+        "currency": "eur",
+        "customer": "cus_Q2",
+        "items": {
+          "object": "list",
+          "data": [
+            {
+              "id": "si_2",
+              "object": "subscription_item",
+              "quantity": 2,
+              "price": {
+                "id": "price_pro_yearly",
+                "object": "price",
+                "currency": "eur",
+                "unit_amount": 29000,
+                "recurring": { "interval": "year", "interval_count": 1, "usage_type": "licensed" }
+              }
+            }
+          ],
+          "has_more": false
+        }
+      },
+      {
+        "id": "sub_3Ptrial",
+        "object": "subscription",
+        "status": "trialing",
+        "currency": "eur",
+        "customer": "cus_Q3",
+        "items": {
+          "object": "list",
+          "data": [
+            {
+              "id": "si_3",
+              "object": "subscription_item",
+              "quantity": 1,
+              "price": {
+                "id": "price_pro_monthly",
+                "object": "price",
+                "currency": "eur",
+                "unit_amount": 2900,
+                "recurring": { "interval": "month", "interval_count": 1, "usage_type": "licensed" }
+              }
+            }
+          ],
+          "has_more": false
+        }
+      }
+    ]
+  },
+  "subscriptionsPage2": {
+    "object": "list",
+    "url": "/v1/subscriptions",
+    "has_more": false,
+    "data": [
+      {
+        "id": "sub_4Pquarterly",
+        "object": "subscription",
+        "status": "active",
+        "currency": "eur",
+        "customer": "cus_Q4",
+        "items": {
+          "object": "list",
+          "data": [
+            {
+              "id": "si_4",
+              "object": "subscription_item",
+              "quantity": 1,
+              "price": {
+                "id": "price_team_quarterly",
+                "object": "price",
+                "currency": "eur",
+                "unit_amount": 9000,
+                "recurring": { "interval": "month", "interval_count": 3, "usage_type": "licensed" }
+              }
+            }
+          ],
+          "has_more": false
+        }
+      },
+      {
+        "id": "sub_5Pcanceled",
+        "object": "subscription",
+        "status": "canceled",
+        "currency": "eur",
+        "customer": "cus_Q5",
+        "items": {
+          "object": "list",
+          "data": [
+            {
+              "id": "si_5",
+              "object": "subscription_item",
+              "quantity": 1,
+              "price": {
+                "id": "price_pro_monthly",
+                "object": "price",
+                "currency": "eur",
+                "unit_amount": 2900,
+                "recurring": { "interval": "month", "interval_count": 1, "usage_type": "licensed" }
+              }
+            }
+          ],
+          "has_more": false
+        }
+      }
+    ]
+  },
+  "charges": {
+    "object": "list",
+    "url": "/v1/charges",
+    "has_more": false,
+    "data": [
+      {
+        "id": "ch_3Psucceeded",
+        "object": "charge",
+        "amount": 29000,
+        "currency": "eur",
+        "created": 1789898400,
+        "description": "Pro (yearly)",
+        "status": "succeeded",
+        "paid": true,
+        "refunded": false,
+        "billing_details": { "email": "grace@example.com", "name": "Grace Hopper" }
+      },
+      {
+        "id": "ch_3Prefunded",
+        "object": "charge",
+        "amount": 4900,
+        "currency": "eur",
+        "created": 1789812000,
+        "description": "Team seat",
+        "status": "succeeded",
+        "paid": true,
+        "refunded": true,
+        "billing_details": { "email": "linus@example.com", "name": null }
+      },
+      {
+        "id": "ch_3Pfailed",
+        "object": "charge",
+        "amount": 2900,
+        "currency": "eur",
+        "created": 1789725600,
+        "description": "Pro (monthly)",
+        "status": "failed",
+        "paid": false,
+        "refunded": false,
+        "failure_code": "card_declined",
+        "billing_details": { "email": "ada@example.com", "name": null }
+      },
+      {
+        "id": "ch_3Ppending",
+        "object": "charge",
+        "amount": 9000,
+        "currency": "eur",
+        "created": 1789639200,
+        "description": null,
+        "status": "pending",
+        "paid": false,
+        "refunded": false,
+        "billing_details": { "email": null, "name": null }
+      },
+      {
+        "id": "ch_3Pmonthly",
+        "object": "charge",
+        "amount": 2900,
+        "currency": "eur",
+        "created": 1789552800,
+        "description": "Pro (monthly)",
+        "status": "succeeded",
+        "paid": true,
+        "refunded": false,
+        "billing_details": { "email": "barbara@example.com", "name": "Barbara Liskov" }
+      }
+    ]
+  },
+  "invalidKey": {
+    "error": {
+      "message": "Invalid API Key provided: sk_live_********************abcd",
+      "type": "invalid_request_error"
+    }
+  },
+  "rateLimited": {
+    "error": {
+      "message": "Request rate limit exceeded. You can learn more about rate limits here https://stripe.com/docs/rate-limits.",
+      "type": "invalid_request_error",
+      "code": "rate_limit"
+    }
+  },
+  "restrictedKey": {
+    "error": {
+      "message": "The provided key 'rk_live_***abcd' does not have the required permissions for this endpoint on account 'acct_1Q'. Having the 'rak_balance_read' permission would allow this request to continue.",
+      "type": "invalid_request_error"
+    }
+  }
+}

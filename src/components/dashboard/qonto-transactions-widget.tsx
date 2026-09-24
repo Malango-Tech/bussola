@@ -237,11 +237,12 @@ export function QontoTransactionsWidget({
   return (
     <div ref={rootRef} className="flex h-full min-h-0 flex-col">
       {loading && transactions.length === 0 ? (
-        <div className="space-y-2 p-1">
+        <div className="space-y-2 p-1" aria-busy="true">
           <Skeleton className="h-4 w-1/3" />
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-8 w-2/3" />
+          <span className="sr-only">Loading transactions</span>
         </div>
       ) : transactions.length === 0 ? (
         <WidgetMessage title="No recent transactions." />

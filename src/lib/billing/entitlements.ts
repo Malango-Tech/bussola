@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { subscriptions } from "@/lib/db/schema";
 import { isCloud } from "@/lib/edition";
@@ -118,6 +118,37 @@ export async function entitlementsFor(
     .limit(1);
 
   return entitlementsFromRow(row ?? null);
+}
+
+/**
+ * `entitlementsFor`, for many organizations in one read.
+ *
+ * For maintenance that walks every tenant — history retention — where asking
+ * one organization at a time is one query per customer. Every id passed in
+ * gets an entry; one without a subscription row gets the trial, exactly as
+ * `entitlementsFor` would give it.
+ */
+export async function entitlementsForMany(
+  organizationIds: string[],
+): Promise<Map<string, Entitlements>> {
+  if (!isCloud) {
+    return new Map(organizationIds.map((id) => [id, SELF_HOSTED]));
+  }
+  if (organizationIds.length === 0) return new Map();
+
+  const db = await getDb();
+  const rows = await db
+    .select()
+    .from(subscriptions)
+    .where(inArray(subscriptions.organizationId, organizationIds));
+  const byOrganization = new Map(rows.map((row) => [row.organizationId, row]));
+
+  return new Map(
+    organizationIds.map((id) => [
+      id,
+      entitlementsFromRow(byOrganization.get(id) ?? null),
+    ]),
+  );
 }
 
 export type LimitName = keyof PlanLimits;

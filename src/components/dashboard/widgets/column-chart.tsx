@@ -9,6 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { seriesSummary } from "./chart-summary";
 
 export type ColumnChartPoint = {
   label: string;
@@ -24,6 +25,8 @@ type ColumnChartProps = {
   headline?: { label: string; value: string };
   /** Fixed upper bound, so rate charts stay comparable day to day. */
   domainMax?: number;
+  /** What the columns measure, e.g. "Open rate" — the start of its accessible name. */
+  label?: string;
   className?: string;
 };
 
@@ -38,6 +41,7 @@ export function ColumnChart({
   points,
   headline,
   domainMax,
+  label = "Chart",
   className,
 }: ColumnChartProps) {
   if (points.length === 0) {
@@ -58,10 +62,15 @@ export function ColumnChart({
           </p>
         </div>
       ) : null}
-      <div className="min-h-0 flex-1">
+      <div
+        className="min-h-0 flex-1"
+        role="img"
+        aria-label={seriesSummary(label, points)}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <RechartsBarChart
             data={points}
+            accessibilityLayer={false}
             margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
           >
             <XAxis

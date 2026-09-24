@@ -1,8 +1,11 @@
 import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { apiTokens, type ApiTokenScope } from "@/lib/db/schema";
+import { apiTokens, member, type ApiTokenScope } from "@/lib/db/schema";
 import { forTenant, type TenantRepos } from "@/lib/db/tenant";
+import { logger } from "@/lib/log";
 import { hashToken, looksLikeToken } from "@/lib/sharing/tokens";
+
+const log = logger("mcp");
 
 /**
  * Turning a bearer token into a tenant, for the MCP server.
@@ -44,6 +47,15 @@ export async function resolveApiToken(
       scope: apiTokens.scope,
     })
     .from(apiTokens)
+    // A token outlives nothing about the person who minted it: once they are
+    // no longer a member, it stops working even if revoking it was missed.
+    .innerJoin(
+      member,
+      and(
+        eq(member.userId, apiTokens.userId),
+        eq(member.organizationId, apiTokens.organizationId),
+      ),
+    )
     .where(
       and(
         eq(apiTokens.tokenHash, hashToken(token)),
@@ -78,8 +90,11 @@ async function touch(tokenId: string): Promise<void> {
       .update(apiTokens)
       .set({ lastUsedAt: new Date() })
       .where(eq(apiTokens.id, tokenId));
-  } catch {
-    // Never worth failing a tool call over.
+  } catch (error) {
+    // Never worth failing a tool call over — but a write failing here is
+    // likely failing elsewhere too, and a stale "last used" date is a poor
+    // place for the only trace of it.
+    log.warn("could not record token use", { tokenId }, error);
   }
 }
 

@@ -1,3 +1,5 @@
+import { env } from "@/lib/env";
+
 /**
  * A sliding-window rate limiter for the endpoints that answer without a
  * session: share links and the MCP server.
@@ -36,8 +38,15 @@ export type RateLimitResult = {
   retryAfter: number;
 };
 
-/** Windows live at module scope so they survive between requests. */
-const buckets = new Map<string, Window>();
+/**
+ * Windows live at module scope so they survive between requests, one map per
+ * namespace (the part of the key before the first `:`). Separate maps mean a
+ * flood of share-link keys can never crowd out MCP callers, or the reverse.
+ *
+ * A Map iterates in insertion order and every touch re-inserts its key, so the
+ * first entry of each map is always the least recently seen.
+ */
+const namespaces = new Map<string, Map<string, Window>>();
 
 /**
  * Idle buckets are swept lazily rather than on a timer: a timer would keep a
@@ -45,36 +54,61 @@ const buckets = new Map<string, Window>();
  */
 const SWEEP_INTERVAL_MS = 60_000;
 const BUCKET_TTL_MS = 10 * 60_000;
-/** A ceiling on distinct keys, so a flood of unique tokens cannot exhaust memory. */
+/** A ceiling on distinct keys per namespace, so a flood of unique keys cannot exhaust memory. */
 const MAX_BUCKETS = 20_000;
 
 let lastSweep = 0;
 
-function sweep(now: number): void {
-  if (now - lastSweep < SWEEP_INTERVAL_MS) return;
+function sweep(now: number, force = false): void {
+  if (!force && now - lastSweep < SWEEP_INTERVAL_MS) return;
   lastSweep = now;
-  for (const [key, window] of buckets) {
-    if (now - window.seenAt > BUCKET_TTL_MS) buckets.delete(key);
+  for (const buckets of namespaces.values()) {
+    for (const [key, window] of buckets) {
+      if (now - window.seenAt > BUCKET_TTL_MS) buckets.delete(key);
+    }
   }
+}
+
+function bucketsFor(key: string): Map<string, Window> {
+  const split = key.indexOf(":");
+  const namespace = split === -1 ? "" : key.slice(0, split);
+  let buckets = namespaces.get(namespace);
+  if (!buckets) {
+    buckets = new Map();
+    namespaces.set(namespace, buckets);
+  }
+  return buckets;
 }
 
 export function rateLimit(key: string, rule: RateLimitRule): RateLimitResult {
   const now = Date.now();
   sweep(now);
 
+  const buckets = bucketsFor(key);
+
   /*
-   * At the ceiling, refuse rather than evict. Evicting the oldest bucket would
-   * let an attacker cycling through keys reset an honest caller's window,
-   * which turns the limiter into the amplifier.
+   * At the ceiling, make room by evicting the least recently seen bucket.
+   *
+   * Refusing every new key instead (as this once did) meant anyone able to
+   * mint ~20k distinct keys could lock every new caller out for ten minutes.
+   * Evicting the stalest bucket bounds memory the same way, and an honest
+   * caller polling every minute is never the stalest one unless an attacker
+   * outpaces it by twenty thousand keys a minute — and even then all they win
+   * is one fresh window for that caller, not a lockout for everyone.
    */
   let window = buckets.get(key);
-  if (!window) {
-    if (buckets.size >= MAX_BUCKETS) {
-      return { ok: false, limit: rule.limit, remaining: 0, retryAfter: 60 };
+  if (window) {
+    buckets.delete(key);
+  } else {
+    if (buckets.size >= MAX_BUCKETS) sweep(now, true);
+    while (buckets.size >= MAX_BUCKETS) {
+      const stalest = buckets.keys().next().value;
+      if (stalest === undefined) break;
+      buckets.delete(stalest);
     }
     window = { hits: [], seenAt: now };
-    buckets.set(key, window);
   }
+  buckets.set(key, window);
 
   const cutoff = now - rule.windowMs;
   // Hits are appended in order, so dropping the expired prefix is a scan from
@@ -116,7 +150,23 @@ export function rateLimit(key: string, rule: RateLimitRule): RateLimitResult {
  */
 export function callerAddress(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]!.trim();
+  if (forwarded) {
+    /*
+     * Read from the right. Each proxy appends the address it received the
+     * connection from, so the right-most entries were written by our own
+     * infrastructure and the left-most by whoever sent the request — reading
+     * the first entry would let a client pick its own rate-limit key.
+     * BUSSOLA_TRUSTED_PROXY_HOPS is how many proxies sit in front of the app
+     * (default 1: one load balancer or platform router).
+     */
+    const hops = env().BUSSOLA_TRUSTED_PROXY_HOPS;
+    const chain = forwarded
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    const address = chain[Math.max(0, chain.length - hops)];
+    if (address) return address;
+  }
   return request.headers.get("x-real-ip") ?? "unknown";
 }
 
@@ -132,7 +182,7 @@ export function rateLimitHeaders(result: RateLimitResult): HeadersInit {
 
 /** Exposed for tests, which must not inherit another test's windows. */
 export function resetRateLimits(): void {
-  buckets.clear();
+  namespaces.clear();
   lastSweep = 0;
 }
 

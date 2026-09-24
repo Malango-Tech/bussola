@@ -3,6 +3,7 @@ import { SharedCanvas } from "@/components/dashboard/shared-canvas";
 import type { CanvasWidget } from "@/components/dashboard/dashboard-canvas";
 import { LIMITS, rateLimit } from "@/lib/http/rate-limit";
 import { recordShareView, resolveShare } from "@/lib/sharing/resolve";
+import { hashToken, looksLikeToken } from "@/lib/sharing/tokens";
 import { toCanvasWidget } from "@/lib/widgets/serialize";
 
 export const runtime = "nodejs";
@@ -33,7 +34,11 @@ export default async function SharedDashboardPage({ params }: Props) {
 
   // Checked before the lookup, so a flood of requests for one token costs a
   // map read rather than a database round trip each.
-  const limited = rateLimit(`share-page:${token}`, LIMITS.sharePage);
+  // A malformed token gets no bucket of its own; it falls through to the
+  // same "no longer active" page resolveShare leads to.
+  const limited = looksLikeToken(token)
+    ? rateLimit(`share-page:${hashToken(token)}`, LIMITS.sharePage)
+    : { ok: true };
   if (!limited.ok) {
     return (
       <main className="flex min-h-dvh items-center justify-center px-6">

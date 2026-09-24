@@ -2,7 +2,10 @@ import { and, eq, isNull, or, gt, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { dashboardShares, dashboards } from "@/lib/db/schema";
 import { forTenant, type TenantRepos } from "@/lib/db/tenant";
+import { logger } from "@/lib/log";
 import { hashToken, looksLikeToken } from "./tokens";
+
+const log = logger("share");
 
 /**
  * Turn a share token into a tenant, the same way `lib/auth/tenant.ts` turns a
@@ -97,6 +100,6 @@ export async function recordShareView(shareId: string): Promise<void> {
       })
       .where(eq(dashboardShares.id, shareId));
   } catch (error) {
-    console.warn("[share] could not record a view:", error);
+    log.warn("could not record a view", { shareId }, error);
   }
 }

@@ -5,7 +5,10 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { CopyIcon, TrashIcon, WarningIcon } from "@phosphor-icons/react";
 import { authClient } from "@/lib/auth/client";
+import { can, hasRole, toMemberRole } from "@/lib/auth/roles";
+import { readJson } from "@/components/api-client";
 import { SectionHeading } from "@/components/layout/page";
+import { PermissionHint } from "@/components/layout/permission-hint";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,7 +123,7 @@ export function MembersSection() {
     const res = await fetch(`/api/members?memberId=${memberId}`, {
       method: "DELETE",
     });
-    const json = (await res.json()) as { error?: string };
+    const json = await readJson(res);
     if (!res.ok) {
       toast.error(json.error || "Could not remove this member");
       return;
@@ -131,7 +134,7 @@ export function MembersSection() {
 
   if (loading) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-3" role="status" aria-label="Loading members">
         <Skeleton className="h-5 w-32" />
         <Skeleton className="h-24 w-full" />
       </div>
@@ -140,7 +143,7 @@ export function MembersSection() {
 
   if (!data) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p role="alert" className="text-sm text-muted-foreground">
         Could not load members. Try reopening settings.
       </p>
     );
@@ -150,7 +153,15 @@ export function MembersSection() {
     data.seats.included === null
       ? null
       : Math.max(0, data.seats.included - data.seats.used);
-  const canManage = data.yourRole === "owner" || data.yourRole === "admin";
+  // The same table the server enforces with, so a role added to ROLE_FOR
+  // later cannot leave this screen offering what the API will refuse.
+  const yourRole = toMemberRole(data.yourRole);
+  const canManage = can(yourRole, "manageMembers");
+  /** Admins manage the team; only an owner may remove another owner. */
+  const canRemove = (member: Member) =>
+    canManage &&
+    !member.isYou &&
+    (toMemberRole(member.role) !== "owner" || hasRole(yourRole, "owner"));
   const seatsFull = seatsLeft !== null && seatsLeft <= 0;
 
   return (
@@ -185,7 +196,7 @@ export function MembersSection() {
                 </p>
               </div>
               <Badge variant="outline">{member.role}</Badge>
-              {canManage && !member.isYou ? (
+              {canRemove(member) ? (
                 <Button
                   type="button"
                   variant="ghost"
@@ -193,12 +204,17 @@ export function MembersSection() {
                   aria-label={`Remove ${member.email}`}
                   onClick={() => remove(member.id)}
                 >
-                  <TrashIcon className="size-4" />
+                  <TrashIcon className="size-4" aria-hidden />
                 </Button>
               ) : null}
             </li>
           ))}
         </ul>
+        {!canManage ? (
+          <PermissionHint permission="manageMembers">
+            invite or remove people
+          </PermissionHint>
+        ) : null}
       </section>
 
       {data.invitations.length > 0 ? (
@@ -223,7 +239,7 @@ export function MembersSection() {
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  aria-label="Copy invitation link"
+                  aria-label={`Copy invitation link for ${invitation.email}`}
                   onClick={() => {
                     void navigator.clipboard
                       .writeText(
@@ -233,17 +249,17 @@ export function MembersSection() {
                       .catch(() => toast.error("Could not copy"));
                   }}
                 >
-                  <CopyIcon className="size-4" />
+                  <CopyIcon className="size-4" aria-hidden />
                 </Button>
                 {canManage ? (
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="Revoke invitation"
+                    aria-label={`Revoke invitation for ${invitation.email}`}
                     onClick={() => revoke(invitation.id)}
                   >
-                    <TrashIcon className="size-4" />
+                    <TrashIcon className="size-4" aria-hidden />
                   </Button>
                 ) : null}
               </li>
@@ -265,7 +281,7 @@ export function MembersSection() {
 
           {!data.emailConfigured ? (
             <p className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-              <WarningIcon className="mt-0.5 size-3.5 shrink-0" />
+              <WarningIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
               <span>
                 No mail provider is configured, so invitations are not emailed —
                 copy the link and send it yourself. {data.emailSetupHint}
@@ -308,6 +324,7 @@ export function MembersSection() {
             <div className="flex items-center gap-2">
               <Input
                 readOnly
+                aria-label="Invitation link"
                 value={lastInviteLink}
                 onFocus={(event) => event.currentTarget.select()}
                 className="font-mono text-xs"
@@ -324,7 +341,7 @@ export function MembersSection() {
                     .catch(() => toast.error("Could not copy"));
                 }}
               >
-                <CopyIcon className="size-4" />
+                <CopyIcon className="size-4" aria-hidden />
               </Button>
             </div>
           ) : null}

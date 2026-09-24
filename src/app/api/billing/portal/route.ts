@@ -1,4 +1,4 @@
-import { jsonError, jsonOk, withTenant } from "@/lib/api";
+import { jsonError, jsonOk, ROLE_FOR, withTenant } from "@/lib/api";
 import { getSession } from "@/lib/auth/tenant";
 import { appUrl, billingConfigured, getStripe } from "@/lib/billing/stripe";
 import { ensureCustomer } from "@/lib/billing/subscription";
@@ -31,5 +31,5 @@ export async function POST() {
     });
 
     return jsonOk({ url: portal.url });
-  });
+  }, { role: ROLE_FOR.manageBilling });
 }

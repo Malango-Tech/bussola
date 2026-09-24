@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { jsonError, jsonOk, withTenant } from "@/lib/api";
+import { jsonError, jsonOk, ROLE_FOR, withTenant } from "@/lib/api";
 import { entitlementsFor } from "@/lib/billing/entitlements";
 import { mintToken } from "@/lib/sharing/tokens";
 
@@ -103,7 +103,7 @@ export async function POST(request: Request, { params }: Params) {
       },
       { status: 201 },
     );
-  });
+  }, { role: ROLE_FOR.manageShares });
 }
 
 export async function DELETE(request: Request, { params }: Params) {
@@ -120,5 +120,5 @@ export async function DELETE(request: Request, { params }: Params) {
     const revoked = await repos.shares.revoke(shareId);
     if (!revoked) return jsonError("Link not found or already revoked", 404);
     return jsonOk({ ok: true, share: toDto(revoked) });
-  });
+  }, { role: ROLE_FOR.manageShares });
 }

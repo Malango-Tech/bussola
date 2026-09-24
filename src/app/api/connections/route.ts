@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { jsonError, jsonOk, withTenant } from "@/lib/api";
+import { jsonError, jsonOk, ROLE_FOR, withTenant } from "@/lib/api";
 import { overLimit } from "@/lib/billing/guard";
 import { syncNow } from "@/lib/sync/runner";
 import {
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     }
 
     return jsonOk({ id, testResult });
-  });
+  }, { role: ROLE_FOR.manageConnections });
 }
 
 export async function DELETE(request: Request) {
@@ -84,5 +84,5 @@ export async function DELETE(request: Request) {
     const removed = await repos.connections.remove(id);
     if (!removed) return jsonError("Connection not found", 404);
     return jsonOk({ ok: true });
-  });
+  }, { role: ROLE_FOR.manageConnections });
 }

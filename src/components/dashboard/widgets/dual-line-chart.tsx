@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { dualSeriesSummary } from "./chart-summary";
 
 export type DualLinePoint = {
   label: string;
@@ -57,6 +58,7 @@ export function DualLineChart({
         <span className="flex items-center gap-1.5">
           <span
             className="size-2 rounded-full"
+            aria-hidden
             style={{ background: "var(--chart-1)" }}
           />
           {countLabel}
@@ -64,15 +66,21 @@ export function DualLineChart({
         <span className="flex items-center gap-1.5">
           <span
             className="size-2 rounded-full"
+            aria-hidden
             style={{ background: "var(--chart-4)" }}
           />
           {rateLabel}
         </span>
       </div>
-      <div className="min-h-0 flex-1">
+      <div
+        className="min-h-0 flex-1"
+        role="img"
+        aria-label={dualSeriesSummary(countLabel, rateLabel, points)}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={points}
+            accessibilityLayer={false}
             margin={{ top: 8, right: 4, left: 0, bottom: 0 }}
           >
             <defs>

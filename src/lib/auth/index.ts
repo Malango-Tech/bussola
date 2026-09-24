@@ -9,7 +9,12 @@ import { organization } from "better-auth/plugins/organization";
 import { and, count, eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { isCloud, isSelfHosted } from "@/lib/edition";
+import { dataDir as configuredDataDir, env } from "@/lib/env";
 import { createId } from "@/lib/id";
+import { logger } from "@/lib/log";
+import { emailConfigured } from "@/lib/notify/email";
+
+const log = logger("auth");
 
 /**
  * Identity, in one place, for both editions.
@@ -32,7 +37,7 @@ let authPromise: Promise<Auth> | undefined;
  * alive across restarts.
  */
 function secret(): string {
-  const configured = process.env.BETTER_AUTH_SECRET;
+  const configured = env().BETTER_AUTH_SECRET;
   if (configured) return configured;
 
   if (isCloud) {
@@ -41,22 +46,26 @@ function secret(): string {
     );
   }
 
-  const dataDir =
-    process.env.BUSSOLA_DATA_DIR || path.join(process.cwd(), "data");
+  const dataDir = configuredDataDir();
   const secretFile = path.join(dataDir, "auth-secret");
 
   try {
     const existing = fs.readFileSync(secretFile, "utf8").trim();
     if (existing.length >= 32) return existing;
-  } catch {
-    // Not created yet — fall through and write one.
+  } catch (error) {
+    // Not created yet — fall through and write one. Anything other than a
+    // missing file (a permissions problem, say) is worth knowing about,
+    // because the write below is about to fail the same way.
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      log.warn("could not read the session secret", { file: secretFile }, error);
+    }
   }
 
   const generated = randomBytes(32).toString("base64url");
   fs.mkdirSync(dataDir, { recursive: true });
   // Owner-only: this key is equivalent to every session on the instance.
   fs.writeFileSync(secretFile, generated, { mode: 0o600 });
-  console.log(`[bussola] generated a session secret at ${secretFile}`);
+  log.info("generated a session secret", { file: secretFile });
 
   return generated;
 }
@@ -71,9 +80,10 @@ function secret(): string {
  * beats a crash inside the invite flow.
  */
 function inviteBaseUrl(): string {
+  const { BETTER_AUTH_URL, BUSSOLA_PUBLIC_URL } = env();
   return (
-    process.env.BETTER_AUTH_URL ||
-    process.env.BUSSOLA_PUBLIC_URL ||
+    BETTER_AUTH_URL ??
+    BUSSOLA_PUBLIC_URL ??
     "http://localhost:3000"
   ).replace(/\/+$/, "");
 }
@@ -92,6 +102,7 @@ function slugFor(email: string): string {
 
 async function build() {
   const db = await getDb();
+  const verifyEmail = isCloud && emailConfigured();
 
   return betterAuth({
     secret: secret(),
@@ -103,16 +114,55 @@ async function build() {
      * infers the origin from the request, which is what self-hosting needs.
      * Cloud sets BETTER_AUTH_URL, so it stays explicit where it matters.
      */
-    baseURL: process.env.BETTER_AUTH_URL || undefined,
+    baseURL: env().BETTER_AUTH_URL,
     database: drizzleAdapter(db, { provider: "pg", schema }),
 
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 8,
-      // Phase 4 wires a real sender; until then a hosted deployment should keep
-      // verification off rather than send nothing and lock people out.
-      requireEmailVerification: false,
+      requireEmailVerification: verifyEmail,
     },
+
+    /*
+     * Cloud with a mail provider proves an address before it can sign in.
+     * Without that, anyone can register someone else's email — squatting the
+     * address, and accepting any invitation sent to it. Self-hosted has one
+     * account whose owner is at the keyboard, and a cloud deployment with no
+     * mail provider cannot send the link, so both keep verification off
+     * rather than lock everyone out.
+     */
+    emailVerification: verifyEmail
+      ? {
+          sendOnSignUp: true,
+          autoSignInAfterVerification: true,
+          expiresIn: 60 * 60 * 24,
+          async sendVerificationEmail({
+            user,
+            url,
+          }: {
+            user: { email: string; name: string };
+            url: string;
+          }) {
+            const { sendEmail } = await import("@/lib/notify/email");
+            const result = await sendEmail({
+              to: user.email,
+              subject: "Confirm your email for Bussola",
+              text: [
+                `Hi ${user.name || "there"},`,
+                "",
+                `Confirm your email address to finish creating your Bussola account: ${url}`,
+                "",
+                "The link is valid for 24 hours. If you did not sign up, you can ignore this email.",
+              ].join("\n"),
+            });
+            if (!result.ok) {
+              // The address stays out of the log: the reason is what an
+              // operator can act on, and it is not worth a copy of PII.
+              log.warn("verification email not sent", { reason: result.error });
+            }
+          },
+        }
+      : undefined,
 
     session: {
       expiresIn: 60 * 60 * 24 * 30,
@@ -215,7 +265,10 @@ async function build() {
           });
 
           if (!result.ok) {
-            console.warn(`[auth] invitation email not sent: ${result.error}`);
+            log.warn("invitation email not sent", {
+              invitationId: data.id,
+              reason: result.error,
+            });
           }
         },
 
@@ -259,6 +312,9 @@ async function build() {
         // Self-hosted has exactly one organization; cloud lets an owner run
         // several (agency with multiple clients, say).
         allowUserToCreateOrganization: isCloud,
+        // An invitation is addressed to an email; only someone who has proven
+        // they hold it may accept.
+        requireEmailVerificationOnInvitation: verifyEmail,
       }),
       // Must stay last: it lets Better Auth set cookies from server actions.
       nextCookies(),

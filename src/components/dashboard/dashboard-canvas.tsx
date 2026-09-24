@@ -302,7 +302,7 @@ export function DashboardCanvas({
                 aria-label="Share dashboard"
                 onClick={() => setShareOpen(true)}
               >
-                <ShareNetworkIcon className="size-4" />
+                <ShareNetworkIcon className="size-4" aria-hidden />
               </Button>
               <Button
                 type="button"
@@ -316,6 +316,7 @@ export function DashboardCanvas({
                 <StarIcon
                   className="size-4"
                   weight={starred ? "fill" : "regular"}
+                  aria-hidden
                 />
               </Button>
               <Button

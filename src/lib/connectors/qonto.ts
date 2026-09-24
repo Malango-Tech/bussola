@@ -13,12 +13,18 @@ import type {
 } from "./types";
 import { toUserFacingError } from "./errors";
 import { fetchJson } from "./http";
+import { byNewest, daysAgo } from "./shared/dates";
+import { connectorLogger } from "./shared/log";
+import { majorOrMinor } from "./shared/money";
+import { collectPages } from "./shared/pagination";
 
 const BASE = "https://thirdparty.qonto.com/v2";
 const TX_PER_PAGE = 100;
 const TX_MAX_PAGES = 5;
 const CASHFLOW_DAYS = 30;
 const FEED_FETCH_MULTIPLIER = 2;
+
+const log = connectorLogger("qonto");
 
 function authHeader(credentials: ConnectionCredentials): string {
   // Qonto API key auth is NOT HTTP Basic: send the raw `login:secret` string.
@@ -100,19 +106,11 @@ type QontoTransactionsPageRaw = {
   };
 };
 
-function moneyFrom(
-  value: number | undefined,
-  cents: number | undefined,
-): number {
-  if (typeof value === "number") return value;
-  return (cents || 0) / 100;
-}
-
 function mapAccount(account: QontoBankAccount): BalanceInfo {
   return {
     currency: account.currency || "EUR",
-    balance: moneyFrom(account.balance, account.balance_cents),
-    authorizedBalance: moneyFrom(
+    balance: majorOrMinor(account.balance, account.balance_cents),
+    authorizedBalance: majorOrMinor(
       account.authorized_balance,
       account.authorized_balance_cents,
     ),
@@ -125,7 +123,7 @@ function mapTransaction(
   tx: QontoTxRaw,
   accountName?: string,
 ): TransactionItem {
-  const amount = moneyFrom(tx.amount, tx.amount_cents);
+  const amount = majorOrMinor(tx.amount, tx.amount_cents);
   const side = tx.side === "credit" ? "credit" : "debit";
   const statusRaw = (tx.status || "completed").toLowerCase();
   const status =
@@ -176,39 +174,31 @@ async function fetchAccountTransactions(
   accountId: string,
   settledFrom: string,
 ): Promise<{ transactions: QontoTxRaw[]; truncated: boolean }> {
-  const collected: QontoTxRaw[] = [];
-  let page = 1;
-  let truncated = false;
+  const { items, truncated } = await collectPages<QontoTxRaw, number>(
+    async (page = 1) => {
+      const params = new URLSearchParams({
+        bank_account_id: accountId,
+        per_page: String(TX_PER_PAGE),
+        page: String(page),
+        sort_by: "settled_at:desc",
+        settled_at_from: settledFrom,
+      });
+      // Include pending so the recent list stays useful; cashflow filters completed.
+      params.append("status[]", "completed");
+      params.append("status[]", "pending");
 
-  while (page <= TX_MAX_PAGES) {
-    const params = new URLSearchParams({
-      bank_account_id: accountId,
-      per_page: String(TX_PER_PAGE),
-      page: String(page),
-      sort_by: "settled_at:desc",
-      settled_at_from: settledFrom,
-    });
-    // Include pending so the recent list stays useful; cashflow filters completed.
-    params.append("status[]", "completed");
-    params.append("status[]", "pending");
+      const data = await qontoFetch<QontoTransactionsPageRaw>(
+        credentials,
+        `/transactions?${params.toString()}`,
+      );
+      const batch = data.transactions || [];
+      const next = data.meta?.next_page;
+      return { items: batch, next: next && batch.length > 0 ? next : null };
+    },
+    TX_MAX_PAGES,
+  );
 
-    const data = await qontoFetch<QontoTransactionsPageRaw>(
-      credentials,
-      `/transactions?${params.toString()}`,
-    );
-    const batch = data.transactions || [];
-    collected.push(...batch);
-
-    const next = data.meta?.next_page;
-    if (!next || batch.length === 0) break;
-    if (page >= TX_MAX_PAGES) {
-      truncated = true;
-      break;
-    }
-    page = next;
-  }
-
-  return { transactions: collected, truncated };
+  return { transactions: items, truncated };
 }
 
 async function fetchAccountTransactionsPage(
@@ -352,8 +342,9 @@ function buildBalanceHistory(
   };
 }
 
-export const qontoConnector: Connector = {
+export const qontoConnector: Connector<QontoDashboard, "qonto"> = {
   provider: "qonto",
+  fetchDashboard: fetchQontoDashboard,
   async test(credentials: ConnectionCredentials): Promise<TestResult> {
     try {
       const data = await qontoFetch<QontoOrg>(credentials, "/organization");
@@ -379,9 +370,7 @@ export async function fetchQontoDashboard(
   const balances = withShare(accounts.map(mapAccount));
   const liquidity = buildLiquidity(balances);
 
-  const settledFrom = new Date(
-    Date.now() - CASHFLOW_DAYS * 24 * 60 * 60 * 1000,
-  ).toISOString();
+  const settledFrom = daysAgo(CASHFLOW_DAYS).toISOString();
 
   const txBatches = await Promise.all(
     accounts.map(async (account) => {
@@ -391,7 +380,14 @@ export async function fetchQontoDashboard(
           account.id,
           settledFrom,
         );
-      } catch {
+      } catch (error) {
+        // The balance still renders, but this account's cashflow and history
+        // now count as zero — a number that looks real, so leave a trace.
+        log.warn(
+          "account transactions unavailable",
+          { accountId: account.id },
+          error,
+        );
         return { transactions: [] as QontoTxRaw[], truncated: false };
       }
     }),
@@ -407,10 +403,7 @@ export async function fetchQontoDashboard(
           : undefined,
       ),
     )
-    .sort(
-      (a, b) =>
-        new Date(b.settledAt).getTime() - new Date(a.settledAt).getTime(),
-    );
+    .sort(byNewest((tx) => tx.settledAt));
 
   const historyIncomplete = txBatches.some((batch) => batch.truncated);
 
@@ -484,7 +477,13 @@ export async function fetchQontoTransactionsPage(
           limit: fetchLimit,
           settledTo: decoded?.settledAt,
         });
-      } catch {
+      } catch (error) {
+        // The feed carries on with the other accounts.
+        log.warn(
+          "account transaction page unavailable",
+          { accountId: account.id },
+          error,
+        );
         return { transactions: [] as QontoTxRaw[], exhausted: true };
       }
     }),

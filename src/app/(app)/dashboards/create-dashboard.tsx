@@ -43,7 +43,7 @@ export function CreateDashboard({ label = "New dashboard" }: { label?: string })
       <DialogTrigger
         render={
           <Button type="button">
-            <PlusIcon className="size-4" />
+            <PlusIcon className="size-4" aria-hidden />
             {label}
           </Button>
         }
@@ -56,6 +56,7 @@ export function CreateDashboard({ label = "New dashboard" }: { label?: string })
           </DialogDescription>
         </DialogHeader>
         <Input
+          aria-label="Dashboard name"
           placeholder="Ops overview"
           value={name}
           onChange={(e) => setName(e.target.value)}

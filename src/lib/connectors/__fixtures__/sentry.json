@@ -1,0 +1,93 @@
+{
+  "organizations": [
+    {
+      "id": "1847502",
+      "slug": "acme",
+      "name": "Acme Inc",
+      "status": { "id": "active", "name": "active" },
+      "dateCreated": "2024-05-02T10:00:00.000000Z",
+      "isEarlyAdopter": false,
+      "require2FA": true,
+      "features": ["performance-view", "session-replay"]
+    }
+  ],
+  "issues": [
+    {
+      "id": "4501238811",
+      "shortId": "API-3K",
+      "title": "TypeError: Cannot read properties of undefined (reading 'id')",
+      "culprit": "app/api/orders/route.ts in GET",
+      "permalink": "https://acme.sentry.io/issues/4501238811/",
+      "logger": null,
+      "level": "error",
+      "status": "unresolved",
+      "substatus": "ongoing",
+      "platform": "node",
+      "project": { "id": "4507000000000011", "name": "api", "slug": "api", "platform": "node" },
+      "type": "error",
+      "count": "1523",
+      "userCount": 87,
+      "firstSeen": "2026-09-01T08:00:00.000000Z",
+      "lastSeen": "2026-09-20T11:48:00.000000Z"
+    },
+    {
+      "id": "4501238790",
+      "shortId": "WORKER-9",
+      "title": "Job exceeded soft timeout",
+      "culprit": "jobs/refunds.processBatch",
+      "permalink": "https://acme.sentry.io/issues/4501238790/",
+      "level": "warning",
+      "status": "unresolved",
+      "project": { "id": "4507000000000012", "slug": "worker" },
+      "count": "12",
+      "userCount": 0,
+      "firstSeen": "2026-09-19T02:00:00.000000Z",
+      "lastSeen": "2026-09-20T09:10:00.000000Z"
+    },
+    {
+      "id": "4501238702",
+      "shortId": "API-3H",
+      "title": "OOMKilled",
+      "level": "fatal",
+      "status": "unresolved",
+      "project": { "id": "4507000000000011", "name": "api", "slug": "api" },
+      "count": 3,
+      "userCount": 3,
+      "lastSeen": "2026-09-20T07:00:00.000000Z"
+    }
+  ],
+  "projects": [
+    {
+      "id": "4507000000000011",
+      "slug": "api",
+      "name": "api",
+      "platform": "node",
+      "status": "active",
+      "hasAccess": true,
+      "isMember": true,
+      "firstEvent": "2025-02-01T00:00:00.000000Z",
+      "dateCreated": "2025-01-30T00:00:00.000000Z"
+    },
+    {
+      "id": "4507000000000012",
+      "slug": "worker",
+      "name": "worker",
+      "platform": "node",
+      "status": "active",
+      "hasAccess": true,
+      "firstEvent": null,
+      "dateCreated": "2026-09-18T00:00:00.000000Z"
+    },
+    {
+      "id": "4507000000000013",
+      "slug": "legacy-web",
+      "name": "legacy-web",
+      "platform": "javascript",
+      "status": "pending_deletion",
+      "hasAccess": true,
+      "firstEvent": "2023-06-01T00:00:00.000000Z"
+    }
+  ],
+  "invalidToken": { "detail": "Invalid token" },
+  "forbidden": { "detail": "You do not have permission to perform this action." }
+}
